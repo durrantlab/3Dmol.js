@@ -3391,7 +3391,7 @@ export class GLViewer {
      *
      * @return {GLModel}
      */
-    public addModel(data?, format="", options?) {
+    public addModel(data?: string, format="", options?) {
         if (options && !options.defaultcolors) {
             options.defaultcolors = this.defaultcolors;
             options.cartoonQuality = options.cartoonQuality || this.config.cartoonQuality;
@@ -3404,6 +3404,63 @@ export class GLViewer {
 
         return m;
     };
+
+    /**
+     * Add an existing GLModel to the viewer. NOTE: JDD addition.
+     * 
+     * @param {GLModel} model - Model to add
+     * @example
+     
+        const model = viewer.makeGLModel(data, "pdb")
+        viewer.addGLModel(model)
+        viewer.render()
+     *
+     * @return {GLModel} The model that was added.
+     */
+    public addGLModel(model: GLModel): GLModel {
+        // I'm not certain model will be complete, so let's just recreate it
+        // using 3Dmol's existing methods. Note that this code is very similar
+        // to that found in addModels. Would be good to elimint redundancy in
+        // the future.
+        
+        const modelatoms = model.selectedAtoms({})
+
+        const newModel = new GLModel(this.models.length, this.defaultcolors);
+        newModel.setAtomDefaults(modelatoms);
+        newModel.addFrame(modelatoms);
+        newModel.setFrame(0);
+        // if (modelatoms.modelData) {
+        //     newModel.setModelData(modelatoms.modelData[i]);
+        // }
+        this.models.push(newModel);
+
+        return newModel;
+    }
+
+    /**
+     * Create a model given molecular data and its format, but do not add it to
+     * the viewer. This is useful if you want to use 3Dmol.js only to parse and
+     * manipulate molecular data. NOTE: JDD addition
+     *
+     * @param {string} txt - Input data
+     * @param {string} format - Input format (see {@link FileFormats})
+     * @param {boolean} noComputeSecondaryStructure - Whether to compute the
+     *     secondary structure.
+     * @example
+     
+        const model = viewer.makeGLModel(data, "pdb")
+     *
+     * @return {GLModel} The model that was created.
+     */
+    public makeGLModel(txt: string, format: string, noComputeSecondaryStructure=false) {
+        let mol = new GLModel(
+            this.models.length, 
+            {defaultcolors:this.defaultcolors, cartoonQuality:this.config.cartoonQuality}
+        );
+        // Assume always multimodel.
+        mol.addMolData(txt, format, { keepH: true, multimodel: true, noComputeSecondaryStructure: noComputeSecondaryStructure });
+        return mol;
+    }
 
     /**
      * Given multimodel file and its format, add atom data to the viewer as separate models
@@ -3479,7 +3536,7 @@ export class GLViewer {
               viewer.render();
           });
      */
-    public addAsOneMolecule(data, format:string, options?) {
+    public addAsOneMolecule(data: string, format:string, options?) {
         options = options || {};
         options.multimodel = true;
         options.onemol = true;
