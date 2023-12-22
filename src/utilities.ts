@@ -1,5 +1,6 @@
 //a collection of miscellaneous utility functions
 
+import { getDocument } from "./WebWorkerShim";
 import { builtinGradients, Gradient } from "./Gradient";
 import { VolumeData } from "./VolumeData";
 import { builtinColorSchemes, CC, elementColors, htmlColors, Color } from "./colors";
@@ -609,7 +610,8 @@ export function getColorFromStyle(atom, style): Color {
 export function getElement(element): HTMLElement | null {
     let ret = element;
     if (typeof (element) === "string") {
-        ret = document.querySelector("#" + element);
+        let documentToUse = getDocument();
+        ret = documentToUse.querySelector("#" + element);
     } else if (typeof element === 'object' && element.get) { //jquery
         ret = element.get(0);
     }

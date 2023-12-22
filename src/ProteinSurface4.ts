@@ -18,8 +18,10 @@ by Euclidean Distance Transform. PLoS ONE 4(12): e8140.
 
 
  */
+import { getWindow } from "./WebWorkerShim";
 import {Vector3} from "./WebGL/math"
 
+const window = getWindow();
 
 /**
  * Surface types
@@ -54,8 +56,8 @@ export function setSyncSurface(val:boolean) {
 // Internet Explorer refuses to allow webworkers in data blobs.  I can find
 // no way of checking for this feature directly, so must do a browser check
 if (window.navigator.userAgent.indexOf('MSIE ') >= 0 ||
-    window.navigator.userAgent.indexOf('Trident/') >= 0) {
-    syncSurface = true; // can't use webworkers
+        window.navigator.userAgent.indexOf('Trident/') >= 0) {
+    syncSurface = true;
 }
 
 

@@ -1,9 +1,8 @@
 //Hackish way to create webworker (independent of $3Dmol namespace) within minified file
 //We need to convert actual javascript into a string, not typescript, so for the time being
-
 //this will remain a JS file
-$3Dmol.workerString = function(){
-
+(typeof $3Dmol === "undefined" ? self.$3Dmol : $3Dmol).workerString = function(){
+    $3Dmol = typeof $3Dmol === "undefined" ? self.$3Dmol : $3Dmol;
     self.onmessage = function(oEvent) {
         var obj = oEvent.data;
         var type = obj.type;
@@ -30,6 +29,8 @@ $3Dmol.workerString = function(){
     
 }.toString().replace(/(^.*?\{|\}$)/g, "");
 
+const windowToUse = typeof window === "undefined" && typeof self !== "undefined" ? self : window;
+
 // NOTE: variable replacement is simplified
 // (See: http://stackoverflow.com/questions/1661197/what-characters-are-valid-for-javascript-variable-names)
 $3Dmol.workerString += ";\nfunction _classCallCheck() {};"; //hack for babel
@@ -38,4 +39,5 @@ $3Dmol.workerString += ";\n"+$3Dmol.MarchingCubeInitializer.toString()+";\n\n";
 $3Dmol.workerString += ";\n"+$3Dmol.PointGrid.toString()+";\n";
 $3Dmol.workerString += ";\nvar ProteinSurface = "+$3Dmol.ProteinSurface.toString()+";\n";
 //console.log($3Dmol.workerString);
-$3Dmol.SurfaceWorker = window.URL ? window.URL.createObjectURL(new Blob([$3Dmol.workerString],{type: 'text/javascript'})) : undefined;
+$3Dmol.SurfaceWorker = windowToUse.URL ? windowToUse.URL.createObjectURL(new Blob([$3Dmol.workerString],{type: 'text/javascript'})) : undefined;
+

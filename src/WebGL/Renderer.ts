@@ -20,6 +20,7 @@ import { Matrix4, Vector3, Matrix3 } from "./math";
 import { Mesh, Line, Sprite } from "./objects";
 import { ShaderLib, ShaderUtils } from "./shaders";
 import { SpritePlugin } from "./SpritePlugin";
+import { getDocument } from "../WebWorkerShim";
 
 export class Renderer {
   row: any;
@@ -147,6 +148,7 @@ export class Renderer {
   private _extColorBufferFloat: ReturnType<WebGL2RenderingContext["getExtension"]>;
 
   constructor(parameters) {
+    const documentToUse = getDocument();
     parameters = parameters || {};
     this.row = parameters.row;
     this.col = parameters.col;
@@ -155,7 +157,7 @@ export class Renderer {
     this._canvas =
       parameters.canvas !== undefined
         ? parameters.canvas
-        : document.createElement("canvas");
+        : documentToUse.createElement("canvas");
     this._precision =
       parameters.precision !== undefined ? parameters.precision : "highp";
     this._alpha = parameters.alpha !== undefined ? parameters.alpha : true;

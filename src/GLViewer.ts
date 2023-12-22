@@ -14,6 +14,7 @@ import { ProteinSurface, SurfaceType, syncSurface } from "./ProteinSurface4";
 import { GLVolumetricRender, VolumetricRendererSpec } from "./VolumetricRender";
 import { AtomSelectionSpec, AtomSpec } from "./specs";
 import { decode, toRGBA8, encode } from 'upng-js'
+import { inWorker } from "./WebWorkerShim";
 
 
 /**
@@ -138,28 +139,42 @@ export class GLViewer {
     };
 
     private setupRenderer() {
+        if (!inWorker()) {
+            this.renderer = new Renderer({
+                antialias: this.config.antialias,
+                preserveDrawingBuffer: true, //so we can export images
+                premultipliedAlpha: false,/* more traditional compositing with background */
+                id: this.config.id,
+                row: this.config.row,
+                col: this.config.col,
+                rows: this.config.rows,
+                cols: this.config.cols,
+                canvas: this.config.canvas,
+                //cannot initialize with zero size
+                containerWidth: this.WIDTH || 1,
+                containerHeight: this.HEIGHT || 1,
+            });
+            this.renderer.domElement.style.width = "100%";
+            this.renderer.domElement.style.height = "100%";
+            this.renderer.domElement.style.padding = "0";
+            this.renderer.domElement.style.position = "absolute"; //TODO: get rid of this
+            this.renderer.domElement.style.top = "0px";
+            this.renderer.domElement.style.left = "0px";
+            this.renderer.domElement.style.zIndex = "0";
+        } else {
+            // @ts-ignore
+            this.renderer = {
+                getYRatio: function() {},
+                getXRatio: function() {},
+                setClearColorHex: function() {},
+                getAspect: function(width: any, height: any) { return 0},
+                render: function() {},
+                setViewport: function() {},
+                domElement: null,
+                setSize: function() {},
 
-        this.renderer = new Renderer({
-            antialias: this.config.antialias,
-            preserveDrawingBuffer: true, //so we can export images
-            premultipliedAlpha: false,/* more traditional compositing with background */
-            id: this.config.id,
-            row: this.config.row,
-            col: this.config.col,
-            rows: this.config.rows,
-            cols: this.config.cols,
-            canvas: this.config.canvas,
-            //cannot initialize with zero size
-            containerWidth: this.WIDTH || 1,
-            containerHeight: this.HEIGHT || 1,
-        });
-        this.renderer.domElement.style.width = "100%";
-        this.renderer.domElement.style.height = "100%";
-        this.renderer.domElement.style.padding = "0";
-        this.renderer.domElement.style.position = "absolute"; //TODO: get rid of this
-        this.renderer.domElement.style.top = "0px";
-        this.renderer.domElement.style.left = "0px";
-        this.renderer.domElement.style.zIndex = "0";
+            }
+        }
     }
 
     private initializeScene() {
@@ -587,7 +602,7 @@ export class GLViewer {
 
         this.WIDTH = this.getWidth();
         this.HEIGHT = this.getHeight();
-
+        
         this.setupRenderer();
 
         this.row = this.config.row == undefined ? 0 : this.config.row;
@@ -608,24 +623,27 @@ export class GLViewer {
         this.projector = new Projector();
 
         this.initializeScene();
-        this.renderer.setClearColorHex(this.bgColor, this.config.backgroundAlpha);
-        this.scene.fog.color = CC.color(this.bgColor);
 
-        // this event is bound to the body element, not the container,
-        // so no need to put it inside initContainer()
-        document.body.addEventListener('mouseup', this._handleMouseUp.bind(this));
-        document.body.addEventListener('touchend', this._handleMouseUp.bind(this));
-
-        this.initContainer(this.container);
-        if (this.config.style) { //enable setting style in constructor
-            this.setViewStyle(this.config);
-        }
-
-        window.addEventListener("resize", this.resize.bind(this));
-
-        if (typeof (window.ResizeObserver) !== "undefined") {
-            this.divwatcher = new window.ResizeObserver(this.resize.bind(this));
-            this.divwatcher.observe(this.container);
+        if (!inWorker()) {
+            this.renderer.setClearColorHex(this.bgColor, this.config.backgroundAlpha);
+            this.scene.fog.color = CC.color(this.bgColor);
+    
+            // this event is bound to the body element, not the container,
+            // so no need to put it inside initContainer()
+            document.body.addEventListener('mouseup', this._handleMouseUp.bind(this));
+            document.body.addEventListener('touchend', this._handleMouseUp.bind(this));
+    
+            this.initContainer(this.container);
+            if (this.config.style) { //enable setting style in constructor
+                this.setViewStyle(this.config);
+            }
+    
+            window.addEventListener("resize", this.resize.bind(this));
+    
+            if (typeof (window.ResizeObserver) !== "undefined") {
+                this.divwatcher = new window.ResizeObserver(this.resize.bind(this));
+                this.divwatcher.observe(this.container);
+            }
         }
 
         try {
@@ -4340,6 +4358,7 @@ export class GLViewer {
                 if (type < 0)
                     type = 0; // negative reserved for atom data
                 for (let i = 0, il = GLViewer.numWorkers; i < il; i++) {
+                    // @ts-ignore
                     var w = new Worker($3Dmol.SurfaceWorker);
                     workers.push(w);
                     w.postMessage({
