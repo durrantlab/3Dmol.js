@@ -20,6 +20,7 @@ import { ArrowSpec } from "GLShape";
 import { ParserOptionsSpec } from "./parsers/ParserOptionsSpec";
 import { LabelSpec } from "Label";
 import { assignBonds } from "./parsers/utils/assignBonds";
+import { VRMLExporter, VRMLExportOptions } from "./VRMLExporter";
 
 /**
  * GLModel represents a group of related atoms
@@ -497,8 +498,7 @@ export class GLModel {
      * @param {AtomSpec} atom
      * @param {Geometry} geo
      */
-    private drawAtomSphere(atom: AtomSpec, geo: Geometry) {
-
+    private drawAtomSphere(atom: AtomSpec, geo: Geometry, sphereQuality?: number) {
         if (!atom.style.sphere)
             return;
         var style = atom.style.sphere;
@@ -513,8 +513,7 @@ export class GLModel {
             var center = new Vector3(atom.x, atom.y, atom.z);
             atom.intersectionShape.sphere.push(new Sphere(center, radius));
         }
-
-        GLDraw.drawSphere(geo, atom, radius, C);
+        GLDraw.drawSphere(geo, atom, radius, C, sphereQuality);
     };
 
     /** Register atom shaped click handlers */
@@ -758,9 +757,16 @@ export class GLModel {
     };
 
     // draws cylinders and small spheres (at bond radius)
-    private drawBondSticks(atom: AtomSpec, atoms: AtomSpec[], geo: Geometry) {
+    private drawBondSticks(atom: AtomSpec, atoms: AtomSpec[], geo: Geometry, options: any = {}) {
         if (!atom.style.stick)
             return;
+        var cylinderOptions: any = {};
+        if(options && options.vrml) {
+                        cylinderOptions = {
+                                        cylinderSubdivisions: options.cylinderSubdivisions,
+                                        cylinderHeightSegments: options.cylinderHeightSegments
+                        };
+        }
         var style = atom.style.stick;
         if (style.hidden)
             return;
@@ -790,14 +796,16 @@ export class GLModel {
             var drawMethod = geo.imposter ? GLModel.drawStickImposter : GLDraw.drawCylinder;
 
             if (!atomDashedBonds && bondOrder >= 1) {
-                return drawMethod;
+                return (geo, from, to, radius, color, fromCap, toCap) => { // dash args ignored
+                                (drawMethod as any)(geo, from, to, radius, color, fromCap, toCap, cylinderOptions);
+                };
             }
 
             // draw dashes
             return (geo, from, to, radius, color, fromCap = 0, toCap = 0, dashLength = 0.1, gapLength = 0.25) => {
                 var segments = this.calculateDashes(from, to, radius, dashLength, gapLength);
                 segments.forEach(segment => {
-                    drawMethod(geo, segment.from, segment.to, radius, color, fromCap, toCap);
+                    (drawMethod as any)(geo, segment.from, segment.to, radius, color, fromCap, toCap, cylinderOptions);
                 });
             };
         };
@@ -1045,7 +1053,7 @@ export class GLModel {
                 this.drawSphereImposter(geo.sphereGeometry, atom as XYZ, bondR, C1);
             }
             else {
-                GLDraw.drawSphere(geo, atom, bondR, C1);
+                GLDraw.drawSphere(geo, atom, bondR, C1, options.sphereQuality);
             }
         }
 
@@ -1122,13 +1130,11 @@ export class GLModel {
 
                     } else opacities[j] = testOpacities[j];
                 }
-
-                drawSphereFunc.call(this, atom, sphereGeometry);
+                drawSphereFunc.call(this, atom, sphereGeometry, options.sphereQuality);
                 this.drawAtomClickSphere(atom);
                 this.drawAtomCross(atom, crossGeometries);
                 this.drawBondLines(atom, atoms, lineGeometries);
-                this.drawBondSticks(atom, atoms, stickGeometry);
-
+                this.drawBondSticks(atom, atoms, stickGeometry, options);
                 if (typeof (atom.style.cartoon) !== "undefined" && !atom.style.cartoon.hidden) {
                     //gradient color scheme range
                     if (atom.style.cartoon.color === "spectrum" && typeof (atom.resi) === "number" && !atom.hetflag) {
@@ -1144,7 +1150,7 @@ export class GLModel {
         }
         // create cartoon if needed - this is a whole model analysis
         if (cartoonAtoms.length > 0) {
-            drawCartoon(ret, cartoonAtoms, range, this.defaultCartoonQuality);
+            drawCartoon(ret, cartoonAtoms, range, options.cartoonQuality || this.defaultCartoonQuality);
         }
 
         // add sphere geometry
@@ -1164,7 +1170,7 @@ export class GLModel {
             }
             else if (sphereGeometry.instanced) {
                 sphere = new Geometry(true);
-                GLDraw.drawSphere(sphere, { x: 0, y: 0, z: 0 }, 1, new Color(0.5, 0.5, 0.5));
+                GLDraw.drawSphere(sphere, { x: 0, y: 0, z: 0 }, 1, new Color(0.5, 0.5, 0.5), options.sphereQuality);
                 sphere.initTypedArrays();
                 sphereMaterial = new InstancedMaterial({
                     sphereMaterial: new MeshLambertMaterial({
@@ -2524,10 +2530,11 @@ export class GLModel {
     /** return a VRML string representation of the model.  Does not include VRML header information
      * @return VRML
      */
-    public exportVRML() {
-        //todo: export spheres and cylinder objects instead of all mesh
-        var tmpobj = this.createMolObj(this.atoms, { supportsImposters: false, supportsAIA: false });
-        return tmpobj.vrml();
+    public exportVRML(options: VRMLExportOptions = {}) {
+        const exporter = new VRMLExporter();
+        const renderOptions = { supportsImposters: false, supportsAIA: false, vrml: true, ...options };
+        var tmpobj = this.createMolObj(this.atoms, renderOptions);
+        return exporter.export(tmpobj, options);
     };
 
     /** Remove any renderable mol object from scene
