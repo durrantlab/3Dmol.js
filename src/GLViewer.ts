@@ -4096,10 +4096,9 @@ export class GLViewer {
      *            extent
      * @param {AtomSpec[]} atomlist
      * @param {AtomSpec[]} atomstoshow
-     * @param {number} scaleFactor
      * @return {Array}
      */
-    private carveUpExtent(extent, atomlist: AtomSpec[], atomstoshow: AtomSpec[], scaleFactor: number) {
+    private carveUpExtent(extent, atomlist: AtomSpec[], atomstoshow: AtomSpec[]) {
         let ret = [];
 
         let index2atomlist = {}; //map from atom.index to position in atomlist
@@ -4160,8 +4159,7 @@ export class GLViewer {
         // divide up extent
         let splits = splitExtentR(extent);
         // now compute atoms within expanded (this could be more efficient)
-        // The offset must be at least probeRadius + (5.5/scaleFactor)
-        let off = 1.4 + (5.5 / scaleFactor) + 0.5; // probeRadius + margin + buffer
+        let off = 6; // enough for water and 2*r, also depends on scale factor
         for (let i = 0, n = splits.length; i < n; i++) {
             let e = copyExtent(splits[i]);
             e[0][0] -= off;
@@ -4319,15 +4317,13 @@ export class GLViewer {
      * @param {AtomSpec[]} atoms
      * @param {number}
      *            vol
-     * @param {number}
-     *   scaleFactor
      * @return {Object}
      */
     private static generateMeshSyncHelper(type: SurfaceType, expandedExtent,
-        extendedAtoms: AtomSpec[], atomsToShow: AtomSpec[], atoms: AtomSpec[], vol: number, scaleFactor?: number) {
+        extendedAtoms: AtomSpec[], atomsToShow: AtomSpec[], atoms: AtomSpec[], vol: number) {
         //            var time = new Date();
         var ps = new ProteinSurface();
-        ps.initparm(expandedExtent, (type === 1) ? false : true, vol, scaleFactor);
+        ps.initparm(expandedExtent, (type === 1) ? false : true, vol);
 
         //            var time2 = new Date();
         //console.log("initialize " + (time2 - time) + "ms");
@@ -4520,18 +4516,7 @@ export class GLViewer {
             }
 
             var totalVol = GLViewer.volume(extent); // used to scale resolution
-            let resolution = style.resolution;
-            // scaleFactor will be undefined if resolution is not provided
-            let scaleFactor;
-            if (resolution) {
-                scaleFactor = 1.0/resolution;
-            } else {
-                scaleFactor = ProteinSurface.defaultScaleFactor;
-                if (totalVol > 1000000) { //heuristically decrease resolution to avoid large memory consumption
-                    scaleFactor /= 2;
-                }
-            }
-            var extents = self.carveUpExtent(extent, atomlist, atomsToShow, scaleFactor);
+            var extents = self.carveUpExtent(extent, atomlist, atomsToShow);
             if (focusSele && focusSele.length && focusSele.length > 0) {
                 var seleExtent = getExtent(focusSele, true);
                 // sort by how close to center of seleExtent
@@ -4587,7 +4572,7 @@ export class GLViewer {
                     return new Promise<void>(function (resolve) {
                         var VandF = GLViewer.generateMeshSyncHelper(type as SurfaceType, extents[i].extent,
                             extents[i].atoms, extents[i].toshow, reducedAtoms,
-                            totalVol, scaleFactor);
+                            totalVol);
                         //complicated surfaces sometimes have > 2^16 vertices
                         var VandFs = splitMesh({ vertexArr: VandF.vertices, faceArr: VandF.faces });
                         for (var vi = 0, vl = VandFs.length; vi < vl; vi++) {
@@ -4626,8 +4611,7 @@ export class GLViewer {
                     w.postMessage({
                         'type': -1,
                         'atoms': reducedAtoms,
-                        'volume': totalVol,
-                        'scaleFactor': scaleFactor
+                        'volume': totalVol
                     });
                 }
 
@@ -5322,9 +5306,7 @@ export interface SurfaceStyleSpec {
     /** Display as wireframe */
     wireframe?: boolean;
     /* specifies a numeric atom property (prop) and color mapping (scheme) such as {@link $3Dmol.Gradient.RWB}.  Deprecated, use colorscheme instead. */
-    map?: Record<string, unknown>;
-    /** Resolution of surface calculation in Angstroms. Lower values are higher quality. Default 0.5. Has a large impact on performance. */
-    resolution?: number;
+    map?: Record<string, unknown>
 };
 
 

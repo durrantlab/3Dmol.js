@@ -14,7 +14,7 @@ $3Dmol.workerString = function(){
             self.ps = new ProteinSurface();  // jshint ignore:line
         } else {
             var ps = self.ps;
-            ps.initparm(obj.expandedExtent, (type == 1) ? false : true, self.volume, self.scaleFactor);
+            ps.initparm(obj.expandedExtent, (type == 1) ? false : true, self.volume);
             ps.fillvoxels(self.atomData, obj.extendedAtoms);
             ps.buildboundary();
             if (type === 4 || type === 2) {
