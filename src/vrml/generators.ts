@@ -1,8 +1,9 @@
 // vrml/generators.ts
-import { GeometryGroup, Material } from "../WebGL";
+import { Geometry, GeometryGroup, Material } from "../WebGL";
 import { VRMLExportOptions, ProcessedGeometryData } from "./types";
 import { formatCoord } from "./utils";
 import { mergeVertices, removeOrphanVertices } from "./optimizers";
+import { simplifyMesh } from "./simplifier";
 
 /**
  * Generates an IndexedLineSet VRML string from a geometry group.
@@ -21,7 +22,16 @@ export function generateIndexedLineSetString(
     output += geoIndent + "  point [\n";
     for (let i = 0; i < geoGroup.vertices; ++i) {
         const offset = i * 3;
-        output += `${geoIndent}    ${formatCoord(geoGroup.vertexArray[offset], options.precision)} ${formatCoord(geoGroup.vertexArray[offset + 1], options.precision)} ${formatCoord(geoGroup.vertexArray[offset + 2], options.precision)},\n`;
+        output += `${geoIndent}    ${formatCoord(
+            geoGroup.vertexArray[offset],
+            options.precision
+        )} ${formatCoord(
+            geoGroup.vertexArray[offset + 1],
+            options.precision
+        )} ${formatCoord(
+            geoGroup.vertexArray[offset + 2],
+            options.precision
+        )},\n`;
     }
     output += geoIndent + "  ]\n" + geoIndent + "}\n";
 
@@ -32,7 +42,16 @@ export function generateIndexedLineSetString(
         output += geoIndent + "  color [\n";
         for (let i = 0; i < geoGroup.vertices; ++i) {
             const offset = i * 3;
-             output += `${geoIndent}    ${formatCoord(geoGroup.colorArray[offset], options.precision)} ${formatCoord(geoGroup.colorArray[offset + 1], options.precision)} ${formatCoord(geoGroup.colorArray[offset + 2], options.precision)},\n`;
+            output += `${geoIndent}    ${formatCoord(
+                geoGroup.colorArray[offset],
+                options.precision
+            )} ${formatCoord(
+                geoGroup.colorArray[offset + 1],
+                options.precision
+            )} ${formatCoord(
+                geoGroup.colorArray[offset + 2],
+                options.precision
+            )},\n`;
         }
         output += geoIndent + "  ]\n" + geoIndent + "}\n";
     } else {
@@ -43,7 +62,9 @@ export function generateIndexedLineSetString(
     output += geoIndent + "coordIndex [\n";
     if (material.wireframe && geoGroup.faceArray) {
         for (let i = 0; i < geoGroup.faceidx; i += 3) {
-            output += `${geoIndent}  ${geoGroup.faceArray[i]}, ${geoGroup.faceArray[i + 1]}, ${geoGroup.faceArray[i + 2]}, -1,\n`;
+            output += `${geoIndent}  ${geoGroup.faceArray[i]}, ${
+                geoGroup.faceArray[i + 1]
+            }, ${geoGroup.faceArray[i + 2]}, -1,\n`;
         }
     } else {
         for (let i = 0; i < geoGroup.vertices - 1; i += 2) {
@@ -61,41 +82,64 @@ export function generateIndexedLineSetString(
 export function generateIndexedFaceSetString(
     geoGroup: GeometryGroup,
     options: VRMLExportOptions,
-    indent: string
+    indent: string,
+    geometry: Geometry
 ): string {
-    let processedData: ProcessedGeometryData;
-
-    // Step 1: Apply vertex merging if requested
-    if (typeof options.mergeVertices === "number" && options.mergeVertices > 0) {
-        processedData = mergeVertices(geoGroup, options.mergeVertices);
-    } else {
-        // Convert geoGroup to ProcessedGeometryData for consistent handling
-        const vertices = [];
-        const normals = [];
-        const colors = [];
-        for (let i = 0; i < geoGroup.vertices; i++) {
-            const offset = i * 3;
-            vertices.push({ x: geoGroup.vertexArray[offset], y: geoGroup.vertexArray[offset+1], z: geoGroup.vertexArray[offset+2] });
-            if (geoGroup.normalArray) normals.push({ x: geoGroup.normalArray[offset], y: geoGroup.normalArray[offset+1], z: geoGroup.normalArray[offset+2] });
-            if (geoGroup.colorArray) colors.push({ r: geoGroup.colorArray[offset], g: geoGroup.colorArray[offset+1], b: geoGroup.colorArray[offset+2] });
-        }
-        processedData = {
-            vertices,
-            normals,
-            colors,
-            faces: Array.from(geoGroup.faceArray.slice(0, geoGroup.faceidx)),
-        };
+    // Convert geoGroup to ProcessedGeometryData first
+    const vertices = [];
+    const normals = [];
+    const colors = [];
+    for (let i = 0; i < geoGroup.vertices; i++) {
+        const offset = i * 3;
+        vertices.push({
+            x: geoGroup.vertexArray[offset],
+            y: geoGroup.vertexArray[offset + 1],
+            z: geoGroup.vertexArray[offset + 2],
+        });
+        if (geoGroup.normalArray)
+            normals.push({
+                x: geoGroup.normalArray[offset],
+                y: geoGroup.normalArray[offset + 1],
+                z: geoGroup.normalArray[offset + 2],
+            });
+        if (geoGroup.colorArray)
+            colors.push({
+                r: geoGroup.colorArray[offset],
+                g: geoGroup.colorArray[offset + 1],
+                b: geoGroup.colorArray[offset + 2],
+            });
     }
+    let processedData: ProcessedGeometryData = {
+        vertices,
+        normals,
+        colors,
+        faces: Array.from(geoGroup.faceArray.slice(0, geoGroup.faceidx)),
+    };
 
-    // Step 2: Apply orphan vertex removal if requested
+    // Step 1: Apply simplification if requested for surfaces
+    if (geometry.isSurface && options.simplifySurfaces) {
+        // Merge vertices with a small tolerance to stitch seams before simplification
+        processedData = mergeVertices(processedData, 1e-5);
+        const ratio =
+            options.simplifySurfaces === true
+                ? 0.5
+                : parseFloat(options.simplifySurfaces as any);
+        if (typeof ratio === "number" && ratio > 0 && ratio < 1) {
+            processedData = simplifyMesh(processedData, ratio);
+        }
+    } 
+
+    // Step 2: Standard vertex merging (regardless of simplifying)
+    processedData = mergeVertices(processedData, options.mergeVertices);
+
+    // Step 3: Apply orphan vertex removal if requested
     if (options.removeOrphanVertexes) {
         processedData = removeOrphanVertices(processedData);
     }
-    
-    // Step 3: Generate the VRML string from the final processed data
+
+    // Step 4: Generate the VRML string from the final processed data
     return _generateFaceSetVRML(processedData, options, indent);
 }
-
 
 /**
  * Private helper to generate the IndexedFaceSet VRML string from processed data.
@@ -112,7 +156,13 @@ function _generateFaceSetVRML(
     // Coordinates
     output += geoIndent + "coord Coordinate {\n" + geoIndent + "  point [\n";
     for (const v of data.vertices) {
-        output += `${geoIndent}    ${formatCoord(v.x, options.precision)} ${formatCoord(v.y, options.precision)} ${formatCoord(v.z, options.precision)},\n`;
+        output += `${geoIndent}    ${formatCoord(
+            v.x,
+            options.precision
+        )} ${formatCoord(v.y, options.precision)} ${formatCoord(
+            v.z,
+            options.precision
+        )},\n`;
     }
     output += geoIndent + "  ]\n" + geoIndent + "}\n";
 
@@ -121,11 +171,17 @@ function _generateFaceSetVRML(
         output += geoIndent + "normalPerVertex TRUE\n";
         output += geoIndent + "normal Normal {\n" + geoIndent + "  vector [\n";
         for (const n of data.normals) {
-            output += `${geoIndent}    ${formatCoord(n.x, options.precision)} ${formatCoord(n.y, options.precision)} ${formatCoord(n.z, options.precision)},\n`;
+            output += `${geoIndent}    ${formatCoord(
+                n.x,
+                options.precision
+            )} ${formatCoord(n.y, options.precision)} ${formatCoord(
+                n.z,
+                options.precision
+            )},\n`;
         }
         output += geoIndent + "  ]\n" + geoIndent + "}\n";
     } else {
-         output += geoIndent + "normalPerVertex FALSE\n";
+        output += geoIndent + "normalPerVertex FALSE\n";
     }
 
     // Colors
@@ -133,7 +189,13 @@ function _generateFaceSetVRML(
         output += geoIndent + "colorPerVertex TRUE\n";
         output += geoIndent + "color Color {\n" + geoIndent + "  color [\n";
         for (const c of data.colors) {
-            output += `${geoIndent}    ${formatCoord(c.r, options.precision)} ${formatCoord(c.g, options.precision)} ${formatCoord(c.b, options.precision)},\n`;
+            output += `${geoIndent}    ${formatCoord(
+                c.r,
+                options.precision
+            )} ${formatCoord(c.g, options.precision)} ${formatCoord(
+                c.b,
+                options.precision
+            )},\n`;
         }
         output += geoIndent + "  ]\n" + geoIndent + "}\n";
     } else {
@@ -144,7 +206,9 @@ function _generateFaceSetVRML(
     if (data.faces.length > 0) {
         output += geoIndent + "coordIndex [\n";
         for (let i = 0; i < data.faces.length; i += 3) {
-            output += `${geoIndent}  ${data.faces[i]}, ${data.faces[i + 1]}, ${data.faces[i + 2]}, -1,\n`;
+            output += `${geoIndent}  ${data.faces[i]}, ${data.faces[i + 1]}, ${
+                data.faces[i + 2]
+            }, -1,\n`;
         }
         output += geoIndent + "]\n";
     }

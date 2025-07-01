@@ -6,6 +6,7 @@ import { VolumeData } from "./VolumeData";
 import { builtinColorSchemes, CC, elementColors, htmlColors, Color } from "./colors";
 import { IsoSurfaceSpec } from "GLShape";
 import { inflate, InflateFunctionOptions, Data } from "pako"
+import { GeometryGroup } from "./WebGL";
 
 //simplified version of jquery extend
 export function extend(obj1, src1) {
@@ -245,6 +246,61 @@ export function mergeGeos(geometry, mesh) {
 
 };
 
+/**
+ * Merges multiple geometry groups into a single geometry group.
+ * @param {Array<GeometryGroup>} groups - Array of geometry groups to merge.
+ * @returns {GeometryGroup} A new, single, merged geometry group.
+ */
+export function mergeGeometryGroups(groups: GeometryGroup[]): GeometryGroup {
+    if (groups.length === 0) return new GeometryGroup();
+    if (groups.length === 1) return groups[0];
+
+    const newGeoGroup = new GeometryGroup();
+    let totalVertices = 0;
+    let totalFaces = 0;
+
+    for (const group of groups) {
+        totalVertices += group.vertices;
+        totalFaces += group.faceidx;
+    }
+
+    if (totalVertices === 0) return newGeoGroup;
+
+    // Pre-allocate arrays
+    newGeoGroup.vertexArray = new Float32Array(totalVertices * 3);
+    newGeoGroup.normalArray = new Float32Array(totalVertices * 3);
+    newGeoGroup.colorArray = new Float32Array(totalVertices * 3);
+    newGeoGroup.faceArray = new Uint16Array(totalFaces);
+
+    let vertexOffset = 0;
+    let faceOffset = 0;
+
+    for (const group of groups) {
+        if (group.vertices > 0) {
+            newGeoGroup.vertexArray.set(group.vertexArray.subarray(0, group.vertices * 3), vertexOffset * 3);
+            if (group.normalArray) {
+                newGeoGroup.normalArray.set(group.normalArray.subarray(0, group.vertices * 3), vertexOffset * 3);
+            }
+            if (group.colorArray) {
+                newGeoGroup.colorArray.set(group.colorArray.subarray(0, group.vertices * 3), vertexOffset * 3);
+            }
+
+            if (group.faceArray) {
+                const faces = group.faceArray.subarray(0, group.faceidx);
+                for (let i = 0; i < faces.length; i++) {
+                    newGeoGroup.faceArray[faceOffset + i] = faces[i] + vertexOffset;
+                }
+                faceOffset += faces.length;
+            }
+
+            vertexOffset += group.vertices;
+        }
+    }
+    
+    newGeoGroup.vertices = vertexOffset;
+    newGeoGroup.faceidx = faceOffset;
+    return newGeoGroup;
+}
 
 /*
  * Parse a string that represents a style or atom selection and convert it

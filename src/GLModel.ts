@@ -1068,7 +1068,7 @@ export class GLModel {
     // at some point we should optimize this to avoid unnecessary
     // recalculation
     /** param {AtomSpec[]} atoms */
-    private createMolObj(atoms: AtomSpec[], options?) {
+    public createMolObj(atoms: AtomSpec[], options?) {
 
         options = options || {};
 

@@ -20,6 +20,8 @@ export interface VRMLExportOptions {
     removeOrphanVertexes?: boolean;
     /** If true, removes extra whitespace in the output. */
     minimizeWhiteSpace?: boolean;
+    /** If set to a number between 0 and 1, reduces the number of polygons in the surfaces to approximately this fraction of the original count. Can also be set to true for a default simplification of 50%. */
+    simplifySurfaces?: number | boolean;
 }
 
 /**

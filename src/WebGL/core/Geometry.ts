@@ -389,6 +389,7 @@ export class Geometry extends EventDispatcher {
   groups: number = 0;
   sphereGeometry?: Geometry;
   drawnCaps?: any;
+  isSurface: boolean = false;
   
   constructor(mesh = false, radii = false, offset = false) {
     super();

@@ -1,5 +1,4 @@
 // vrml/optimizers.ts
-import { GeometryGroup } from "../WebGL";
 import { ProcessedGeometryData } from "./types";
 
 /**
@@ -8,31 +7,22 @@ import { ProcessedGeometryData } from "./types";
  * It also averages normals for the merged vertices.
  */
 export function mergeVertices(
-    geoGroup: GeometryGroup,
+    data: ProcessedGeometryData,
     mergeDist: number
 ): ProcessedGeometryData {
     const mergeDistSq = mergeDist * mergeDist;
     const newVertices: { x: number; y: number; z: number }[] = [];
-    const newNormalsData: { x: number; y: number; z: number; count: number }[] = [];
+    const newNormalsData: { x: number; y: number; z: number; count: number }[] =
+        [];
     const newColors: { r: number; g: number; b: number }[] = [];
-    const oldToNewMap = new Int32Array(geoGroup.vertices).fill(-1);
+    const oldToNewMap = new Int32Array(data.vertices.length).fill(-1);
     const grid: { [key: string]: number[] } = {};
     const cellSize = mergeDist;
 
-    for (let i = 0; i < geoGroup.vertices; i++) {
-        const offset = i * 3;
-        const v = {
-            x: geoGroup.vertexArray[offset],
-            y: geoGroup.vertexArray[offset + 1],
-            z: geoGroup.vertexArray[offset + 2],
-        };
-        const c = geoGroup.colorArray
-            ? {
-                  r: geoGroup.colorArray[offset],
-                  g: geoGroup.colorArray[offset + 1],
-                  b: geoGroup.colorArray[offset + 2],
-              }
-            : null;
+    for (let i = 0; i < data.vertices.length; i++) {
+        const v = data.vertices[i];
+        const c = data.colors.length > i ? data.colors[i] : null;
+        const n_in = data.normals.length > i ? data.normals[i] : null;
 
         const gx = Math.floor(v.x / cellSize);
         const gy = Math.floor(v.y / cellSize);
@@ -47,21 +37,25 @@ export function mergeVertices(
                     if (grid[gridKey]) {
                         for (const newIndex of grid[gridKey]) {
                             const nv = newVertices[newIndex];
-                            const distSq = (v.x - nv.x) ** 2 + (v.y - nv.y) ** 2 + (v.z - nv.z) ** 2;
-
+                            const distSq =
+                                (v.x - nv.x) ** 2 +
+                                (v.y - nv.y) ** 2 +
+                                (v.z - nv.z) ** 2;
                             if (distSq < mergeDistSq) {
                                 // Check if colors match if they exist
                                 if (c) {
                                     const nc = newColors[newIndex];
-                                    const colorDistSq = (c.r - nc.r) ** 2 + (c.g - nc.g) ** 2 + (c.b - nc.b) ** 2;
+                                    const colorDistSq =
+                                        (c.r - nc.r) ** 2 +
+                                        (c.g - nc.g) ** 2 +
+                                        (c.b - nc.b) ** 2;
                                     if (colorDistSq > 1e-6) continue;
                                 }
-
                                 oldToNewMap[i] = newIndex;
-                                if (geoGroup.normalArray) {
-                                    newNormalsData[newIndex].x += geoGroup.normalArray[offset];
-                                    newNormalsData[newIndex].y += geoGroup.normalArray[offset + 1];
-                                    newNormalsData[newIndex].z += geoGroup.normalArray[offset + 2];
+                                if (n_in) {
+                                    newNormalsData[newIndex].x += n_in.x;
+                                    newNormalsData[newIndex].y += n_in.y;
+                                    newNormalsData[newIndex].z += n_in.z;
                                     newNormalsData[newIndex].count++;
                                 }
                                 found = true;
@@ -77,29 +71,36 @@ export function mergeVertices(
             const newIndex = newVertices.length;
             oldToNewMap[i] = newIndex;
             newVertices.push(v);
-            if (geoGroup.normalArray) {
+            if (n_in) {
                 newNormalsData.push({
-                    x: geoGroup.normalArray[offset],
-                    y: geoGroup.normalArray[offset + 1],
-                    z: geoGroup.normalArray[offset + 2],
+                    x: n_in.x,
+                    y: n_in.y,
+                    z: n_in.z,
                     count: 1,
                 });
             }
             if (c) newColors.push(c);
-
             const gridKey = `${gx},${gy},${gz}`;
             if (!grid[gridKey]) grid[gridKey] = [];
             grid[gridKey].push(newIndex);
         }
     }
 
-    const newFaces = Array.from(geoGroup.faceArray).map(oldIndex => oldToNewMap[oldIndex]);
-    const newNormals = newNormalsData.map(n => {
+    const newFaces = data.faces.map((oldIndex) => oldToNewMap[oldIndex]);
+
+    const newNormals = newNormalsData.map((n) => {
         const len = Math.sqrt(n.x ** 2 + n.y ** 2 + n.z ** 2);
-        return len > 0 ? { x: n.x / len, y: n.y / len, z: n.z / len } : { x: 0, y: 0, z: 0 };
+        return len > 0
+            ? { x: n.x / len, y: n.y / len, z: n.z / len }
+            : { x: 0, y: 0, z: 0 };
     });
 
-    return { vertices: newVertices, normals: newNormals, colors: newColors, faces: newFaces };
+    return {
+        vertices: newVertices,
+        normals: newNormals,
+        colors: newColors,
+        faces: newFaces,
+    };
 }
 
 /**
@@ -119,7 +120,7 @@ export function removeOrphanVertices(
     }
 
     let newVertexCount = 0;
-    for(const u of used) if(u) newVertexCount++;
+    for (const u of used) if (u) newVertexCount++;
 
     if (newVertexCount === data.vertices.length) {
         return data; // No orphans found
@@ -129,7 +130,7 @@ export function removeOrphanVertices(
     const finalVertices: typeof data.vertices = [];
     const finalNormals: typeof data.normals = [];
     const finalColors: typeof data.colors = [];
-    
+
     let finalIndex = 0;
     for (let i = 0; i < data.vertices.length; i++) {
         if (used[i]) {
@@ -140,7 +141,7 @@ export function removeOrphanVertices(
         }
     }
 
-    const finalFaces = data.faces.map(oldIndex => oldToNewMap[oldIndex]);
+    const finalFaces = data.faces.map((oldIndex) => oldToNewMap[oldIndex]);
 
     return {
         vertices: finalVertices,
@@ -154,7 +155,7 @@ export function removeOrphanVertices(
  * Minimizes whitespace in a VRML string.
  * This is the core logic for the 'minimizeWhiteSpace' optimization.
  * It removes unnecessary spaces and leading/trailing whitespace while preserving newlines.
- * 
+ *
  * @param vrmlTxt - The VRML text to optimize.
  * @returns The optimized VRML text with minimized whitespace.
  */

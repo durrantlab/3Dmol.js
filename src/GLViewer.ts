@@ -4491,6 +4491,7 @@ export class GLViewer {
 
         var addSurfaceHelper = function addSurfaceHelper(surfobj: SurfObj, atomlist: AtomSpec[], atomsToShow: AtomSpec[]) {
             //function returns promise with surfid resolved
+            surfobj.geo.isSurface = true;
             if (!focus) {
                 focusSele = atomsToShow;
             } else {

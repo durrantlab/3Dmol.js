@@ -9,8 +9,12 @@ import {
 } from "../WebGL";
 import { VRMLExportOptions } from "./types";
 import { formatCoord } from "./utils";
-import { generateIndexedFaceSetString, generateIndexedLineSetString } from "./generators";
+import {
+    generateIndexedFaceSetString,
+    generateIndexedLineSetString,
+} from "./generators";
 import { minimizeWhiteSpace } from "./optimizers";
+import { mergeGeometryGroups } from "../utilities";
 
 /**
  * A class for exporting a 3Dmol.js scene to VRML format.
@@ -39,14 +43,22 @@ export class VRMLExporter {
     /**
      * Recursively parses an Object3D node and its children.
      */
-    public parse(object: Object3D, options: VRMLExportOptions, indent: string): string {
+    public parse(
+        object: Object3D,
+        options: VRMLExportOptions,
+        indent: string
+    ): string {
         if (object.visible === false) return "";
 
         let content = "";
         const childIndent = indent + "  ";
-
         if (object.geometry) {
-            content += this.parseGeometry(object.geometry, object.material, options, childIndent);
+            content += this.parseGeometry(
+                object.geometry,
+                object.material,
+                options,
+                childIndent
+            );
         }
 
         for (const child of object.children) {
@@ -73,7 +85,7 @@ export class VRMLExporter {
             angle = 0;
         }
         output += `${propIndent}rotation ${axis.x} ${axis.y} ${axis.z} ${angle}\n`;
-        
+
         // Scale
         output += `${propIndent}scale ${object.scale.x} ${object.scale.y} ${object.scale.z}\n`;
 
@@ -84,14 +96,42 @@ export class VRMLExporter {
 
         return output;
     }
-    
+
     /**
      * Parses the geometry of an object.
      */
-    private parseGeometry(geometry: Geometry, material: Material, options: VRMLExportOptions, indent: string): string {
+    private parseGeometry(
+        geometry: Geometry,
+        material: Material,
+        options: VRMLExportOptions,
+        indent: string
+    ): string {
+        if (
+            geometry.isSurface &&
+            options.simplifySurfaces &&
+            geometry.geometryGroups.length > 0
+        ) {
+            const mergedGeoGroup = mergeGeometryGroups(geometry.geometryGroups);
+            if (mergedGeoGroup.vertices > 0) {
+                return this.parseGeometryGroup(
+                    mergedGeoGroup,
+                    material,
+                    options,
+                    indent,
+                    geometry
+                );
+            }
+            return "";
+        }
         let output = "";
         for (const geoGroup of geometry.geometryGroups) {
-            output += this.parseGeometryGroup(geoGroup, material, options, indent);
+            output += this.parseGeometryGroup(
+                geoGroup,
+                material,
+                options,
+                indent,
+                geometry
+            );
         }
         return output;
     }
@@ -99,37 +139,71 @@ export class VRMLExporter {
     /**
      * Parses a single geometry group into a VRML Shape node.
      */
-    private parseGeometryGroup(geoGroup: GeometryGroup, material: Material, options: VRMLExportOptions, indent: string): string {
+    private parseGeometryGroup(
+        geoGroup: GeometryGroup,
+        material: Material,
+        options: VRMLExportOptions,
+        indent: string,
+        geometry: Geometry
+    ): string {
         if (!geoGroup || geoGroup.vertices === 0) return "";
 
         let output = indent + "Shape {\n";
         const shapeIndent = indent + "  ";
-        
+
         // Appearance and Material
         output += shapeIndent + "appearance Appearance {\n";
         const appearanceIndent = shapeIndent + "  ";
         output += appearanceIndent + "material Material {\n";
         const materialIndent = appearanceIndent + "  ";
+
         if (material.color) {
-            output += `${materialIndent}diffuseColor ${formatCoord(material.color.r, options.precision)} ${formatCoord(material.color.g, options.precision)} ${formatCoord(material.color.b, options.precision)}\n`;
+            output += `${materialIndent}diffuseColor ${formatCoord(
+                material.color.r,
+                options.precision
+            )} ${formatCoord(
+                material.color.g,
+                options.precision
+            )} ${formatCoord(material.color.b, options.precision)}\n`;
         }
+
         if (material.wireframe && geoGroup.colorArray) {
-            output += `${materialIndent}emissiveColor ${formatCoord(geoGroup.colorArray[0], options.precision)} ${formatCoord(geoGroup.colorArray[1], options.precision)} ${formatCoord(geoGroup.colorArray[2], options.precision)}\n`;
+            output += `${materialIndent}emissiveColor ${formatCoord(
+                geoGroup.colorArray[0],
+                options.precision
+            )} ${formatCoord(
+                geoGroup.colorArray[1],
+                options.precision
+            )} ${formatCoord(geoGroup.colorArray[2], options.precision)}\n`;
         }
+
         if (material.transparent) {
-            output += `${materialIndent}transparency ${1.0 - material.opacity}\n`;
+            output += `${materialIndent}transparency ${
+                1.0 - material.opacity
+            }\n`;
         }
+
         output += appearanceIndent + "}\n";
         output += shapeIndent + "}\n";
 
         // Geometry Node (delegated to generators)
         if (material instanceof LineBasicMaterial || material.wireframe) {
-            output += generateIndexedLineSetString(geoGroup, material, options, shapeIndent);
+            output += generateIndexedLineSetString(
+                geoGroup,
+                material,
+                options,
+                shapeIndent
+            );
         } else {
-            output += generateIndexedFaceSetString(geoGroup, options, shapeIndent);
+            output += generateIndexedFaceSetString(
+                geoGroup,
+                options,
+                shapeIndent,
+                geometry
+            );
         }
-        output += indent + "}\n";
 
+        output += indent + "}\n";
         return output;
     }
 }
