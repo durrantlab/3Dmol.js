@@ -118,8 +118,8 @@ export function generateIndexedFaceSetString(
 
     // Step 1: Apply simplification if requested for surfaces
     if (geometry.isSurface && options.simplifySurfaces) {
-        // Merge vertices with a small tolerance to stitch seams before simplification
-        processedData = mergeVertices(processedData, 1e-5);
+        // Merge vertices with a small tolerance to stitch seams before simplification, ignoring color differences.
+        processedData = mergeVertices(processedData, 1, true);
         const ratio =
             options.simplifySurfaces === true
                 ? 0.5

@@ -4522,8 +4522,16 @@ export class GLViewer {
             var totalVol = GLViewer.volume(extent); // used to scale resolution
             let resolution = style.resolution;
             // scaleFactor will be undefined if resolution is not provided
-            let scaleFactor = resolution ? 1.0 / resolution : undefined;
-            var extents = self.carveUpExtent(extent, atomlist, atomsToShow, scaleFactor || 2.0);
+            let scaleFactor;
+            if (resolution) {
+                scaleFactor = 1.0/resolution;
+            } else {
+                scaleFactor = ProteinSurface.defaultScaleFactor;
+                if (totalVol > 1000000) { //heuristically decrease resolution to avoid large memory consumption
+                    scaleFactor /= 2;
+                }
+            }
+            var extents = self.carveUpExtent(extent, atomlist, atomsToShow, scaleFactor);
             if (focusSele && focusSele.length && focusSele.length > 0) {
                 var seleExtent = getExtent(focusSele, true);
                 // sort by how close to center of seleExtent

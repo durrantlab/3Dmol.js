@@ -8,13 +8,15 @@ import { ProcessedGeometryData } from "./types";
  */
 export function mergeVertices(
     data: ProcessedGeometryData,
-    mergeDist: number
+    mergeDist: number,
+    ignoreColors = false
 ): ProcessedGeometryData {
+    if (mergeDist === undefined || mergeDist <= 0) return data;
     const mergeDistSq = mergeDist * mergeDist;
     const newVertices: { x: number; y: number; z: number }[] = [];
     const newNormalsData: { x: number; y: number; z: number; count: number }[] =
         [];
-    const newColors: { r: number; g: number; b: number }[] = [];
+    const newColorsData: { r: number; g: number; b: number; count: number }[] = [];
     const oldToNewMap = new Int32Array(data.vertices.length).fill(-1);
     const grid: { [key: string]: number[] } = {};
     const cellSize = mergeDist;
@@ -43,8 +45,8 @@ export function mergeVertices(
                                 (v.z - nv.z) ** 2;
                             if (distSq < mergeDistSq) {
                                 // Check if colors match if they exist
-                                if (c) {
-                                    const nc = newColors[newIndex];
+                                if (!ignoreColors && c) {
+                                    const nc = newColorsData[newIndex];
                                     const colorDistSq =
                                         (c.r - nc.r) ** 2 +
                                         (c.g - nc.g) ** 2 +
@@ -57,6 +59,12 @@ export function mergeVertices(
                                     newNormalsData[newIndex].y += n_in.y;
                                     newNormalsData[newIndex].z += n_in.z;
                                     newNormalsData[newIndex].count++;
+                                }
+                                if (c) {
+                                    newColorsData[newIndex].r += c.r;
+                                    newColorsData[newIndex].g += c.g;
+                                    newColorsData[newIndex].b += c.b;
+                                    newColorsData[newIndex].count++;
                                 }
                                 found = true;
                                 break;
@@ -79,7 +87,14 @@ export function mergeVertices(
                     count: 1,
                 });
             }
-            if (c) newColors.push(c);
+            if (c) {
+                newColorsData.push({
+                    r: c.r,
+                    g: c.g,
+                    b: c.b,
+                    count: 1,
+                });
+            }
             const gridKey = `${gx},${gy},${gz}`;
             if (!grid[gridKey]) grid[gridKey] = [];
             grid[gridKey].push(newIndex);
@@ -94,7 +109,13 @@ export function mergeVertices(
             ? { x: n.x / len, y: n.y / len, z: n.z / len }
             : { x: 0, y: 0, z: 0 };
     });
-
+    const newColors = newColorsData.map((c) => {
+        return {
+            r: c.r / c.count,
+            g: c.g / c.count,
+            b: c.b / c.count,
+        };
+    });
     return {
         vertices: newVertices,
         normals: newNormals,

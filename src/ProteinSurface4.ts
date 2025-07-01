@@ -734,8 +734,8 @@ export class ProteinSurface {
     ptrany:number = 0;
     ptranz:number = 0;
     probeRadius:number = 1.4;
-    defaultScaleFactor:number = 2;
-    scaleFactor:number = this.defaultScaleFactor; // 2 is .5A grid; if this is made user configurable,
+    static readonly defaultScaleFactor:number = 2;
+    scaleFactor:number = ProteinSurface.defaultScaleFactor; // 2 is .5A grid; if this is made user configurable,
                             // also have to adjust offset used to find non-shown
                             // atoms
     pHeight:number = 0;
@@ -873,10 +873,10 @@ export class ProteinSurface {
             this.scaleFactor = scaleFactor;
         }
         else if (volume > 1000000) { //heuristical decrease resolution to avoid large memory consumption
-            this.scaleFactor = this.defaultScaleFactor / 2;
+            this.scaleFactor = ProteinSurface.defaultScaleFactor / 2;
         }
         else {
-         this.scaleFactor = this.defaultScaleFactor;
+         this.scaleFactor = ProteinSurface.defaultScaleFactor;
         }
         let margin = (1 / this.scaleFactor) * 5.5; // need margin to avoid
                                                 // boundary/round off effects
