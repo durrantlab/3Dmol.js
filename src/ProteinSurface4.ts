@@ -868,10 +868,16 @@ export class ProteinSurface {
     };
 
 
-    public initparm (extent: number[][], btype, volume) {
-        if(volume > 1000000) //heuristical decrease resolution to avoid large memory consumption
-            this.scaleFactor = this.defaultScaleFactor/2;
-        
+    public initparm (extent: number[][], btype, volume, scaleFactor?: number) {
+        if (scaleFactor) {
+            this.scaleFactor = scaleFactor;
+        }
+        else if (volume > 1000000) { //heuristical decrease resolution to avoid large memory consumption
+            this.scaleFactor = this.defaultScaleFactor / 2;
+        }
+        else {
+         this.scaleFactor = this.defaultScaleFactor;
+        }
         let margin = (1 / this.scaleFactor) * 5.5; // need margin to avoid
                                                 // boundary/round off effects
         this.pminx = extent[0][0]; this.pmaxx = extent[1][0];

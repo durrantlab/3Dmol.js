@@ -4095,9 +4095,10 @@ export class GLViewer {
      *            extent
      * @param {AtomSpec[]} atomlist
      * @param {AtomSpec[]} atomstoshow
+     * @param {number} scaleFactor
      * @return {Array}
      */
-    private carveUpExtent(extent, atomlist: AtomSpec[], atomstoshow: AtomSpec[]) {
+    private carveUpExtent(extent, atomlist: AtomSpec[], atomstoshow: AtomSpec[], scaleFactor: number) {
         let ret = [];
 
         let index2atomlist = {}; //map from atom.index to position in atomlist
@@ -4158,8 +4159,8 @@ export class GLViewer {
         // divide up extent
         let splits = splitExtentR(extent);
         // now compute atoms within expanded (this could be more efficient)
-        let off = 6; // enough for water and 2*r, also depends on scale
-        // factor
+        // The offset must be at least probeRadius + (5.5/scaleFactor)
+        let off = 1.4 + (5.5 / scaleFactor) + 0.5; // probeRadius + margin + buffer
         for (let i = 0, n = splits.length; i < n; i++) {
             let e = copyExtent(splits[i]);
             e[0][0] -= off;
@@ -4317,13 +4318,15 @@ export class GLViewer {
      * @param {AtomSpec[]} atoms
      * @param {number}
      *            vol
+     * @param {number}
+     *   scaleFactor
      * @return {Object}
      */
     private static generateMeshSyncHelper(type: SurfaceType, expandedExtent,
-        extendedAtoms: AtomSpec[], atomsToShow: AtomSpec[], atoms: AtomSpec[], vol: number) {
+        extendedAtoms: AtomSpec[], atomsToShow: AtomSpec[], atoms: AtomSpec[], vol: number, scaleFactor?: number) {
         //            var time = new Date();
         var ps = new ProteinSurface();
-        ps.initparm(expandedExtent, (type === 1) ? false : true, vol);
+        ps.initparm(expandedExtent, (type === 1) ? false : true, vol, scaleFactor);
 
         //            var time2 = new Date();
         //console.log("initialize " + (time2 - time) + "ms");
@@ -4515,8 +4518,10 @@ export class GLViewer {
             }
 
             var totalVol = GLViewer.volume(extent); // used to scale resolution
-            var extents = self.carveUpExtent(extent, atomlist, atomsToShow);
-
+            let resolution = style.resolution;
+            // scaleFactor will be undefined if resolution is not provided
+            let scaleFactor = resolution ? 1.0 / resolution : undefined;
+            var extents = self.carveUpExtent(extent, atomlist, atomsToShow, scaleFactor || 2.0);
             if (focusSele && focusSele.length && focusSele.length > 0) {
                 var seleExtent = getExtent(focusSele, true);
                 // sort by how close to center of seleExtent
@@ -4572,7 +4577,7 @@ export class GLViewer {
                     return new Promise<void>(function (resolve) {
                         var VandF = GLViewer.generateMeshSyncHelper(type as SurfaceType, extents[i].extent,
                             extents[i].atoms, extents[i].toshow, reducedAtoms,
-                            totalVol);
+                            totalVol, scaleFactor);
                         //complicated surfaces sometimes have > 2^16 vertices
                         var VandFs = splitMesh({ vertexArr: VandF.vertices, faceArr: VandF.faces });
                         for (var vi = 0, vl = VandFs.length; vi < vl; vi++) {
@@ -4611,7 +4616,8 @@ export class GLViewer {
                     w.postMessage({
                         'type': -1,
                         'atoms': reducedAtoms,
-                        'volume': totalVol
+                        'volume': totalVol,
+                        'scaleFactor': scaleFactor
                     });
                 }
 
@@ -5306,7 +5312,9 @@ export interface SurfaceStyleSpec {
     /** Display as wireframe */
     wireframe?: boolean;
     /* specifies a numeric atom property (prop) and color mapping (scheme) such as {@link $3Dmol.Gradient.RWB}.  Deprecated, use colorscheme instead. */
-    map?: Record<string, unknown>
+    map?: Record<string, unknown>;
+    /** Resolution of surface calculation in Angstroms. Lower values are higher quality. Default 0.5. Has a large impact on performance. */
+    resolution?: number;
 };
 
 
