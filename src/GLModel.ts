@@ -762,10 +762,10 @@ export class GLModel {
             return;
         var cylinderOptions: any = {};
         if(options && options.vrml) {
-                        cylinderOptions = {
-                                        cylinderSubdivisions: options.cylinderSubdivisions,
-                                        cylinderHeightSegments: options.cylinderHeightSegments
-                        };
+            cylinderOptions = {
+                cylinderSubdivisions: options.cylinderSubdivisions,
+                cylinderHeightSegments: options.cylinderHeightSegments
+            };
         }
         var style = atom.style.stick;
         if (style.hidden)
@@ -797,7 +797,7 @@ export class GLModel {
 
             if (!atomDashedBonds && bondOrder >= 1) {
                 return (geo, from, to, radius, color, fromCap, toCap) => { // dash args ignored
-                                (drawMethod as any)(geo, from, to, radius, color, fromCap, toCap, cylinderOptions);
+                    (drawMethod as any)(geo, from, to, radius, color, fromCap, toCap, cylinderOptions);
                 };
             }
 

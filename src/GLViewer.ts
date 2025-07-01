@@ -1,59 +1,19 @@
 //a molecular viewer based on GLMol
 
-import { decode, encode, toRGBA8 } from "upng-js";
+import { decode, encode, toRGBA8 } from 'upng-js';
 import { AtomStyleSpec, GLModel, LineStyleSpec } from "./GLModel";
-import {
-    ArrowSpec,
-    BoxSpec,
-    CurveSpec,
-    CustomShapeSpec,
-    CylinderSpec,
-    GLShape,
-    IsoSurfaceSpec,
-    LineSpec,
-    ShapeSpec,
-    SphereSpec,
-    splitMesh,
-} from "./GLShape";
+import { ArrowSpec, BoxSpec, CurveSpec, CustomShapeSpec, CylinderSpec, GLShape, IsoSurfaceSpec, LineSpec, ShapeSpec, SphereSpec, splitMesh } from "./GLShape";
 import { getGradient, Gradient } from "./Gradient";
 import { Label, LabelSpec } from "./Label";
 import { ProteinSurface, SurfaceType, syncSurface } from "./ProteinSurface4";
 import { VolumeData } from "./VolumeData";
 import { GLVolumetricRender, VolumetricRendererSpec } from "./VolumetricRender";
-import {
-    Camera,
-    Coloring,
-    Fog,
-    FrontSide,
-    Geometry,
-    Light,
-    Line,
-    LineBasicMaterial,
-    Material,
-    Mesh,
-    MeshDoubleLambertMaterial,
-    MeshLambertMaterial,
-    Object3D,
-    Projector,
-    Raycaster,
-    Renderer,
-    Scene,
-} from "./WebGL";
+import { Camera, Coloring, Fog, FrontSide, Geometry, Light, Line, LineBasicMaterial, Material, Mesh, MeshDoubleLambertMaterial, MeshLambertMaterial, Object3D, Projector, Raycaster, Renderer, Scene } from "./WebGL";
 import { Matrix3, Matrix4, Quaternion, Vector3, XYZ } from "./WebGL/math";
 import { CC, ColorschemeSpec, ColorSpec, elementColors } from "./colors";
 import { AtomSelectionSpec, AtomSpec } from "./specs";
-import {
-    adjustVolumeStyle,
-    extend,
-    getColorFromStyle,
-    getElement,
-    getExtent,
-    getPropertyRange,
-    isEmptyObject,
-    makeFunction,
-    mergeGeos,
-    PausableTimer,
-} from "./utilities";
+import { adjustVolumeStyle, extend, getColorFromStyle, getElement, getExtent, getPropertyRange, isEmptyObject, makeFunction, mergeGeos, PausableTimer } from "./utilities";
+
 import { VRMLExporter, VRMLExportOptions } from "./VRMLExporter";
 export const CONTEXTS_PER_VIEWPORT = 16;
 
@@ -71,7 +31,7 @@ interface SurfObj {
  * A surface.
  *
  * @class
- */
+*/
 class Surface extends Array<SurfObj> {
     style?: SurfaceStyleSpec;
     atomsel?: AtomSelectionSpec;
@@ -92,11 +52,11 @@ class Surface extends Array<SurfObj> {
         //we assume all sub-objects have same symmetries
         if (this.length == 0) return [];
         let obj = this[0];
-        if (typeof obj.symmetries == "undefined") {
+        if (typeof (obj.symmetries) == 'undefined') {
             this.setSymmetries([new Matrix4()]);
         }
         return obj.symmetries;
-    }
+    };
 
     /**
      * Sets symmetries based on specified matrices in list
@@ -105,15 +65,14 @@ class Surface extends Array<SurfObj> {
      *
      */
     public setSymmetries(syms) {
-        if (typeof syms == "undefined") {
-            //delete sym data
+        if (typeof (syms) == "undefined") { //delete sym data
             syms = [new Matrix4()];
         }
         for (let obj of this) {
             obj.symmetries = syms;
             obj.finished = false; //trigger redraw
         }
-    }
+    };
 }
 
 /**
@@ -121,7 +80,7 @@ class Surface extends Array<SurfObj> {
  * Note: The preferred method of instantiating a GLViewer is through {@link createViewer}
  *
  * @class
- */
+*/
 export class GLViewer {
     // private class variables
     private static numWorkers = 4; // number of threads for surface generation
@@ -186,10 +145,10 @@ export class GLViewer {
     public container: HTMLElement | null;
 
     static readonly surfaceTypeMap = {
-        VDW: SurfaceType.VDW,
-        MS: SurfaceType.MS,
-        SAS: SurfaceType.SAS,
-        SES: SurfaceType.SES,
+        "VDW": SurfaceType.VDW,
+        "MS": SurfaceType.MS,
+        "SAS": SurfaceType.SAS,
+        "SES": SurfaceType.SES
     };
 
     private cq = new Quaternion(0, 0, 0, 1);
@@ -214,50 +173,50 @@ export class GLViewer {
     private intwatcher: any;
     private spinInterval: any;
 
+
     private getWidth() {
         let div = this.container;
         //offsetwidth accounts for scaling
         let w = div.offsetWidth;
-        if (w == 0 && div.style.display === "none") {
+        if (w == 0 && div.style.display === 'none') {
             let oldpos = div.style.position;
             let oldvis = div.style.visibility;
-            div.style.display = "block";
-            div.style.visibility = "hidden";
-            div.style.position = "absolute";
+            div.style.display = 'block';
+            div.style.visibility = 'hidden';
+            div.style.position = 'absolute';
             w = div.offsetWidth;
-            div.style.display = "none";
+            div.style.display = 'none';
             div.style.visibility = oldvis;
             div.style.position = oldpos;
         }
         return w;
-    }
+    };
 
     private getHeight() {
         let div = this.container;
         let h = div.offsetHeight;
-        if (h == 0 && div.style.display === "none") {
+        if (h == 0 && div.style.display === 'none') {
             let oldpos = div.style.position;
             let oldvis = div.style.visibility;
-            div.style.display = "block";
-            div.style.visibility = "hidden";
-            div.style.position = "absolute";
+            div.style.display = 'block';
+            div.style.visibility = 'hidden';
+            div.style.position = 'absolute';
             h = div.offsetHeight;
-            div.style.display = "none";
+            div.style.display = 'none';
             div.style.visibility = oldvis;
             div.style.position = oldpos;
         }
         return h;
-    }
+    };
 
     private setupRenderer() {
         let rendopt = {
             ...this.config,
             preserveDrawingBuffer: true, //so we can export images
-            premultipliedAlpha:
-                false /* more traditional compositing with background */,
+            premultipliedAlpha: false,/* more traditional compositing with background */
             //cannot initialize with zero size - render will start out lost
             containerWidth: this.WIDTH,
-            containerHeight: this.HEIGHT,
+            containerHeight: this.HEIGHT
         };
         this.renderer = new Renderer(rendopt);
         this.renderer.domElement.style.width = "100%";
@@ -270,6 +229,7 @@ export class GLViewer {
     }
 
     private initializeScene() {
+
         this.scene = new Scene();
         this.scene.fog = new Fog(this.bgColor, 100, 200);
 
@@ -282,13 +242,15 @@ export class GLViewer {
         this.scene.add(this.rotationGroup);
 
         // setup lights
-        var directionalLight = new Light(0xffffff);
-        directionalLight.position = new Vector3(0.2, 0.2, 1).normalize();
+        var directionalLight = new Light(0xFFFFFF);
+        directionalLight.position = new Vector3(0.2, 0.2, 1)
+            .normalize();
         directionalLight.intensity = 1.0;
         this.scene.add(directionalLight);
-    }
+    };
 
     private _handleLostContext(event) {
+
         //when contexts go missing, try to regenerate any that are visible on screen
         //but no more than CONTEXTS_PER_VIEWPORT (if this is set higher than the
         //browser limit there will be an infinity loop of refreshing contexts of
@@ -298,17 +260,14 @@ export class GLViewer {
             return !(
                 rect.right < 0 ||
                 rect.bottom < 0 ||
-                rect.top >
-                    (window.innerHeight ||
-                        document.documentElement.clientHeight) ||
-                rect.left >
-                    (window.innerWidth || document.documentElement.clientWidth)
+                rect.top > (window.innerHeight || document.documentElement.clientHeight) ||
+                rect.left > (window.innerWidth || document.documentElement.clientWidth)
             );
         };
 
         if (isVisible(this.container)) {
             let restored = 0;
-            for (let c of document.getElementsByTagName("canvas")) {
+            for (let c of document.getElementsByTagName('canvas')) {
                 if (isVisible(c) && (c as any)._3dmol_viewer != undefined) {
                     (c as any)._3dmol_viewer.resize();
                     restored += 1;
@@ -328,113 +287,86 @@ export class GLViewer {
         this.glDOM = this.renderer.domElement;
 
         (this.glDOM as any)._3dmol_viewer = this;
-        this.glDOM.addEventListener(
-            "webglcontextlost",
-            this._handleLostContext.bind(this)
-        );
+        this.glDOM.addEventListener("webglcontextlost", this._handleLostContext.bind(this));
 
         if (!this.nomouse) {
             // user can request that the mouse handlers not be installed
-            this.glDOM.addEventListener(
-                "mousedown",
-                this._handleMouseDown.bind(this),
-                { passive: false }
-            );
-            this.glDOM.addEventListener(
-                "touchstart",
-                this._handleMouseDown.bind(this),
-                { passive: false }
-            );
-            this.glDOM.addEventListener(
-                "wheel",
-                this._handleMouseScroll.bind(this),
-                { passive: false }
-            );
-            this.glDOM.addEventListener(
-                "mousemove",
-                this._handleMouseMove.bind(this),
-                { passive: false }
-            );
-            this.glDOM.addEventListener(
-                "touchmove",
-                this._handleMouseMove.bind(this),
-                { passive: false }
-            );
-            this.glDOM.addEventListener(
-                "contextmenu",
-                this._handleContextMenu.bind(this),
-                { passive: false }
-            );
+            this.glDOM.addEventListener('mousedown', this._handleMouseDown.bind(this), { passive: false });
+            this.glDOM.addEventListener('touchstart', this._handleMouseDown.bind(this), { passive: false });
+            this.glDOM.addEventListener('wheel', this._handleMouseScroll.bind(this), { passive: false });
+            this.glDOM.addEventListener('mousemove', this._handleMouseMove.bind(this), { passive: false });
+            this.glDOM.addEventListener('touchmove', this._handleMouseMove.bind(this), { passive: false });
+            this.glDOM.addEventListener("contextmenu", this._handleContextMenu.bind(this), { passive: false });
         }
-    }
+
+    };
 
     private decAnim() {
         //decrement the number of animations currently
         this.animated--;
         if (this.animated < 0) this.animated = 0;
-    }
+    };
 
     private incAnim() {
         this.animated++;
-    }
+    };
 
     private nextSurfID() {
         //compute the next highest surface id directly from surfaces
         //this is necessary to support linking of model data
         var max = 0;
-        for (let i in this.surfaces) {
-            // this is an object with possible holes
+        for (let i in this.surfaces) { // this is an object with possible holes
             if (!this.surfaces.hasOwnProperty(i)) continue;
             var val = parseInt(i);
             if (!isNaN(val)) {
-                if (val > max) max = val;
+                if (val > max)
+                    max = val;
             }
         }
         return max + 1;
-    }
+    };
 
     private setSlabAndFog() {
+
         let center = this.camera.position.z - this.rotationGroup.position.z;
-        if (center < 1) center = 1;
+        if (center < 1)
+            center = 1;
         this.camera.near = center + this.slabNear;
-        if (!this.camera.ortho && this.camera.near < 1) this.camera.near = 1;
+        if (!this.camera.ortho && this.camera.near < 1)
+            this.camera.near = 1;
         this.camera.far = center + this.slabFar;
         if (this.camera.near + 1 > this.camera.far)
             this.camera.far = this.camera.near + 1;
 
         this.camera.fov = this.fov;
-        this.camera.right = center * Math.tan((Math.PI / 180) * this.fov);
+        this.camera.right = center * Math.tan(Math.PI / 180 * this.fov);
         this.camera.left = -this.camera.right;
         this.camera.top = this.camera.right / this.ASPECT;
         this.camera.bottom = -this.camera.top;
 
         this.camera.updateProjectionMatrix();
 
-        this.scene.fog.near =
-            this.camera.near +
-            this.fogStart * (this.camera.far - this.camera.near);
-        this.scene.fog.far =
-            this.camera.near +
-            this.fogEnd * (this.camera.far - this.camera.near);
+        this.scene.fog.near = this.camera.near + this.fogStart * (this.camera.far - this.camera.near);
+        this.scene.fog.far = this.camera.near + this.fogEnd * (this.camera.far - this.camera.near);
 
         if (this.config.disableFog) {
             this.scene.fog.near = this.scene.fog.far;
         }
-    }
+    };
 
     // display scene
     //if nolink is set/true, don't propagate changes to linked viewers
     private show(nolink?) {
         this.renderer.setViewport();
-        if (!this.scene) return;
+        if (!this.scene)
+            return;
         //let time = new Date();
         this.setSlabAndFog();
         this.renderer.render(this.scene, this.camera);
         //console.log("rendered in " + (+new Date() - (time as any)) + "ms");
 
         //have any scene change trigger a callback
-        if (this.viewChangeCallback)
-            this.viewChangeCallback(this._viewer.getView());
+        if (this.viewChangeCallback) this.viewChangeCallback(this._viewer.getView());
 
         if (!nolink && this.linkedViewers.length > 0) {
             var view = this._viewer.getView();
@@ -443,32 +375,28 @@ export class GLViewer {
                 other.setView(view, true);
             }
         }
-    }
+    };
+
 
     //regenerate the list of clickables
     //also updates hoverables
     private updateClickables() {
         this.clickables.splice(0, this.clickables.length);
         this.hoverables.splice(0, this.hoverables.length);
-        this.contextMenuEnabledObjects.splice(
-            0,
-            this.contextMenuEnabledObjects.length
-        );
+        this.contextMenuEnabledObjects.splice(0, this.contextMenuEnabledObjects.length);
 
         for (let i = 0, il = this.models.length; i < il; i++) {
             let model = this.models[i];
             if (model) {
                 let atoms = model.selectedAtoms({
-                    clickable: true,
+                    clickable: true
                 });
 
                 let hoverable_atoms = model.selectedAtoms({
-                    hoverable: true,
+                    hoverable: true
                 });
 
-                let contextMenuEnabled_atom = model.selectedAtoms({
-                    contextMenuEnabled: true,
-                });
+                let contextMenuEnabled_atom = model.selectedAtoms({ contextMenuEnabled: true });
                 // Array.prototype.push.apply(hoverables,hoverable_atoms);
                 for (let n = 0; n < hoverable_atoms.length; n++) {
                     this.hoverables.push(hoverable_atoms[n]);
@@ -481,13 +409,13 @@ export class GLViewer {
 
                 // add atoms into contextMenuEnabledObjects
                 for (let m = 0; m < contextMenuEnabled_atom.length; m++) {
-                    this.contextMenuEnabledObjects.push(
-                        contextMenuEnabled_atom[m]
-                    );
+                    this.contextMenuEnabledObjects.push(contextMenuEnabled_atom[m]);
                 }
+
             }
         }
         for (let i = 0, il = this.shapes.length; i < il; i++) {
+
             let shape = this.shapes[i];
             if (shape && shape.clickable) {
                 this.clickables.push(shape);
@@ -499,7 +427,7 @@ export class GLViewer {
                 this.contextMenuEnabledObjects.push(shape);
             }
         }
-    }
+    };
 
     // Checks for selection intersects on mousedown
     private handleClickSelection(mouseX: number, mouseY: number, event) {
@@ -508,31 +436,25 @@ export class GLViewer {
         if (intersects.length) {
             var selected = intersects[0].clickable;
             if (selected.callback !== undefined) {
-                if (typeof selected.callback != "function") {
+                if (typeof (selected.callback) != "function") {
                     selected.callback = makeFunction(selected.callback);
                 }
-                if (typeof selected.callback === "function") {
+                if (typeof (selected.callback) === "function") {
                     // Suppress click callbacks when context menu will be invoked.
                     // This only applies to clicks from "mouseup" events after right-click.
                     // Clicks from "touchend" after longtouch contextmenu are suppressed
                     // in _handleContextMenu.
-                    const isContextMenu =
-                        this.mouseButton === 3 &&
-                        this.contextMenuEnabledObjects.includes(selected) &&
-                        this.userContextMenuHandler;
+                    const isContextMenu = this.mouseButton === 3
+                        && this.contextMenuEnabledObjects.includes(selected)
+                        && this.userContextMenuHandler;
                     if (!isContextMenu) {
-                        selected.callback(
-                            selected,
-                            this._viewer,
-                            event,
-                            this.container,
-                            intersects
-                        );
+                        selected.callback(selected, this._viewer, event, this.container, intersects);
                     }
                 }
             }
         }
-    }
+    };
+
 
     //return offset of container
     private canvasOffset() {
@@ -543,44 +465,31 @@ export class GLViewer {
         let win = doc.defaultView;
         return {
             top: rect.top + win.pageYOffset - docElem.clientTop,
-            left: rect.left + win.pageXOffset - docElem.clientLeft,
+            left: rect.left + win.pageXOffset - docElem.clientLeft
         };
-    }
+    };
 
     //set current_hover to sel (which can be null), calling appropraite callbacks
     private setHover(selected, event?, intersects?) {
         if (this.current_hover == selected) return;
         if (this.current_hover) {
-            if (typeof this.current_hover.unhover_callback != "function") {
-                this.current_hover.unhover_callback = makeFunction(
-                    this.current_hover.unhover_callback
-                );
+            if (typeof (this.current_hover.unhover_callback) != "function") {
+                this.current_hover.unhover_callback = makeFunction(this.current_hover.unhover_callback);
             }
-            this.current_hover.unhover_callback(
-                this.current_hover,
-                this._viewer,
-                event,
-                this.container,
-                intersects
-            );
+            this.current_hover.unhover_callback(this.current_hover, this._viewer, event, this.container, intersects);
         }
         this.current_hover = selected;
 
         if (selected && selected.hover_callback !== undefined) {
-            if (typeof selected.hover_callback != "function") {
+            if (typeof (selected.hover_callback) != "function") {
                 selected.hover_callback = makeFunction(selected.hover_callback);
             }
-            if (typeof selected.hover_callback === "function") {
-                selected.hover_callback(
-                    selected,
-                    this._viewer,
-                    event,
-                    this.container,
-                    intersects
-                );
+            if (typeof (selected.hover_callback) === "function") {
+                selected.hover_callback(selected, this._viewer, event, this.container, intersects);
             }
         }
-    }
+
+    };
 
     //checks for selection intersects on hover
     private handleHoverSelection(mouseX, mouseY, event) {
@@ -590,10 +499,11 @@ export class GLViewer {
             var selected = intersects[0].clickable;
             this.setHover(selected, event, intersects);
             this.current_hover = selected;
-        } else {
+        }
+        else {
             this.setHover(null);
         }
-    }
+    };
 
     //sees if the mouse is still on the object that invoked a hover event and if not then the unhover callback is called
     private handleHoverContinue(mouseX: number, mouseY: number) {
@@ -601,13 +511,10 @@ export class GLViewer {
         if (intersects.length == 0 || intersects[0] === undefined) {
             this.setHover(null);
         }
-        if (
-            intersects[0] !== undefined &&
-            intersects[0].clickable !== this.current_hover
-        ) {
+        if (intersects[0] !== undefined && intersects[0].clickable !== this.current_hover) {
             this.setHover(null);
         }
-    }
+    };
 
     /**
      * Determine if a positioned event is "close enough" to mouseStart to be considered a click.
@@ -615,10 +522,7 @@ export class GLViewer {
      * @param {Event} event
      * @param {{ allowTolerance, tolerance: number }} options
      */
-    private closeEnoughForClick(
-        event,
-        { allowTolerance = event.targetTouches, tolerance = 5 } = {}
-    ) {
+    private closeEnoughForClick(event, { allowTolerance = event.targetTouches, tolerance = 5 } = {}) {
         const x = this.getX(event);
         const y = this.getY(event);
         if (allowTolerance) {
@@ -630,36 +534,43 @@ export class GLViewer {
         }
     }
 
-    private calcTouchDistance(ev) {
-        // distance between first two
+    private calcTouchDistance(ev) { // distance between first two
         // fingers
-        var xdiff = ev.targetTouches[0].pageX - ev.targetTouches[1].pageX;
-        var ydiff = ev.targetTouches[0].pageY - ev.targetTouches[1].pageY;
+        var xdiff = ev.targetTouches[0].pageX -
+            ev.targetTouches[1].pageX;
+        var ydiff = ev.targetTouches[0].pageY -
+            ev.targetTouches[1].pageY;
         return Math.hypot(xdiff, ydiff);
-    }
+    };
 
     //check targetTouches as well
     private getX(ev) {
         var x = ev.pageX;
         if (x == undefined) x = ev.pageX; //firefox
-        if (ev.targetTouches && ev.targetTouches[0]) {
+        if (ev.targetTouches &&
+            ev.targetTouches[0]) {
             x = ev.targetTouches[0].pageX;
-        } else if (ev.changedTouches && ev.changedTouches[0]) {
+        }
+        else if (ev.changedTouches &&
+            ev.changedTouches[0]) {
             x = ev.changedTouches[0].pageX;
         }
         return x;
-    }
+    };
 
     private getY(ev) {
         var y = ev.pageY;
         if (y == undefined) y = ev.pageY;
-        if (ev.targetTouches && ev.targetTouches[0]) {
+        if (ev.targetTouches &&
+            ev.targetTouches[0]) {
             y = ev.targetTouches[0].pageY;
-        } else if (ev.changedTouches && ev.changedTouches[0]) {
+        }
+        else if (ev.changedTouches &&
+            ev.changedTouches[0]) {
             y = ev.changedTouches[0].pageY;
         }
         return y;
-    }
+    };
 
     //for grid viewers, return true if point is in this viewer
     private isInViewer(x: number, y: number) {
@@ -667,16 +578,17 @@ export class GLViewer {
             var width = this.WIDTH / this.cols;
             var height = this.HEIGHT / this.rows;
             var offset = this.canvasOffset();
-            var relx = x - offset.left;
-            var rely = y - offset.top;
+            var relx = (x - offset.left);
+            var rely = (y - offset.top);
 
             var r = this.rows - Math.floor(rely / height) - 1;
             var c = Math.floor(relx / width);
 
-            if (r != this.row || c != this.col) return false;
+            if (r != this.row || c != this.col)
+                return false;
         }
         return true;
-    }
+    };
 
     //if the user has specify zoom limits, readjust to fit within them
     //also, make sure we don't go past CAMERA_Z
@@ -697,7 +609,7 @@ export class GLViewer {
         }
 
         return z;
-    }
+    };
     //interpolate between two normalized quaternions (t between 0 and 1)
     //https://en.wikipedia.org/wiki/Slerp
     private static slerp(v0: Quaternion, v1: Quaternion, t: number) {
@@ -713,8 +625,7 @@ export class GLViewer {
                 v0.x + t * (v1.x - v0.x),
                 v0.y + t * (v1.y - v0.y),
                 v0.z + t * (v1.z - v0.z),
-                v0.w + t * (v1.w - v0.w)
-            );
+                v0.w + t * (v1.w - v0.w));
 
             result.normalize();
             return result;
@@ -731,12 +642,12 @@ export class GLViewer {
         if (dot > 1) dot = 1.0;
         else if (dot < -1) dot = -1.0;
 
-        var theta_0 = Math.acos(dot); // theta_0 = angle between input vectors
-        var theta = theta_0 * t; // theta = angle between v0 and result
+        var theta_0 = Math.acos(dot);  // theta_0 = angle between input vectors
+        var theta = theta_0 * t;    // theta = angle between v0 and result
 
         var v2 = v1.clone();
         v2.sub(v0.clone().multiplyScalar(dot));
-        v2.normalize(); // { v0, v2 } is now an orthonormal basis
+        v2.normalize();              // { v0, v2 } is now an orthonormal basis
 
         var c = Math.cos(theta);
         var s = Math.sin(theta);
@@ -748,7 +659,8 @@ export class GLViewer {
         );
         ret.normalize();
         return ret;
-    }
+    };
+
 
     /* @param {Object} element HTML element within which to create viewer
      * @param {ViewerSpec} config Object containing optional configuration for the viewer
@@ -763,20 +675,14 @@ export class GLViewer {
         this.nomouse = Boolean(this.config.nomouse);
         this.bgColor = 0;
         this.config.backgroundColor = this.config.backgroundColor || "#ffffff";
-        if (typeof this.config.backgroundColor != "undefined") {
+        if (typeof (this.config.backgroundColor) != 'undefined') {
             this.bgColor = CC.color(this.config.backgroundColor).getHex();
         }
-        this.config.backgroundAlpha =
-            this.config.backgroundAlpha == undefined
-                ? 1.0
-                : this.config.backgroundAlpha;
+        this.config.backgroundAlpha = this.config.backgroundAlpha == undefined ? 1.0 : this.config.backgroundAlpha;
 
         this.camerax = 0;
-        if (typeof this.config.camerax != "undefined") {
-            this.camerax =
-                typeof this.config.camerax === "string"
-                    ? parseFloat(this.config.camerax)
-                    : this.config.camerax;
+        if (typeof (this.config.camerax) != 'undefined') {
+            this.camerax = typeof (this.config.camerax) === 'string' ? parseFloat(this.config.camerax) : this.config.camerax;
         }
         this._viewer = this;
         this.container = element; //we expect container to be HTMLElement
@@ -785,8 +691,7 @@ export class GLViewer {
             this.hoverDuration = this.config.hoverDuration;
         }
         if (this.config.antialias === undefined) this.config.antialias = true;
-        if (this.config.cartoonQuality === undefined)
-            this.config.cartoonQuality = 10;
+        if (this.config.cartoonQuality === undefined) this.config.cartoonQuality = 10;
 
         this.WIDTH = this.getWidth();
         this.HEIGHT = this.getHeight();
@@ -802,55 +707,36 @@ export class GLViewer {
 
         this.ASPECT = this.renderer.getAspect(this.WIDTH, this.HEIGHT);
 
-        this.camera = new Camera(
-            this.fov,
-            this.ASPECT,
-            this.NEAR,
-            this.FAR,
-            this.config.orthographic
-        );
+        this.camera = new Camera(this.fov, this.ASPECT, this.NEAR, this.FAR, this.config.orthographic);
         this.camera.position = new Vector3(this.camerax, 0, this.CAMERA_Z);
         this.lookingAt = new Vector3();
         this.camera.lookAt(this.lookingAt);
 
-        this.raycaster = new Raycaster(
-            new Vector3(0, 0, 0),
-            new Vector3(0, 0, 0)
-        );
+        this.raycaster = new Raycaster(new Vector3(0, 0, 0), new Vector3(0, 0, 0));
         this.projector = new Projector();
 
         this.initializeScene();
-        this.renderer.setClearColorHex(
-            this.bgColor,
-            this.config.backgroundAlpha
-        );
+        this.renderer.setClearColorHex(this.bgColor, this.config.backgroundAlpha);
         this.scene.fog.color = CC.color(this.bgColor);
 
         // this event is bound to the body element, not the container,
         // so no need to put it inside initContainer()
-        document.body.addEventListener(
-            "mouseup",
-            this._handleMouseUp.bind(this)
-        );
-        document.body.addEventListener(
-            "touchend",
-            this._handleMouseUp.bind(this)
-        );
+        document.body.addEventListener('mouseup', this._handleMouseUp.bind(this));
+        document.body.addEventListener('touchend', this._handleMouseUp.bind(this));
 
         this.initContainer(this.container);
-        if (this.config.style) {
-            //enable setting style in constructor
+        if (this.config.style) { //enable setting style in constructor
             this.setViewStyle(this.config as ViewStyle);
         }
 
         window.addEventListener("resize", this.resize.bind(this));
 
-        if (typeof window.ResizeObserver !== "undefined") {
+        if (typeof (window.ResizeObserver) !== "undefined") {
             this.divwatcher = new window.ResizeObserver(this.resize.bind(this));
             this.divwatcher.observe(this.container);
         }
 
-        if (typeof window.IntersectionObserver !== "undefined") {
+        if (typeof (window.IntersectionObserver) !== "undefined") {
             //make sure a viewer that is becoming visible is alive
             let intcallback = (entries, observer) => {
                 entries.forEach((entry) => {
@@ -864,34 +750,35 @@ export class GLViewer {
         }
 
         try {
-            if (typeof this.callback === "function") this.callback(this);
+            if (typeof (this.callback) === "function")
+                this.callback(this);
         } catch (e) {
             // errors in callback shouldn't invalidate the viewer
             console.log("error with glviewer callback: " + e);
         }
-    }
+
+    };
 
     /**
-     * Return a list of objects that intersect that at the specified viewer position.
-     *
-     * @param x - x position in screen coordinates
-     * @param y - y position in screen coordinates
-     * @param {Object[]} - list of objects or selection object specifying what object to check for targeting
-     */
+    * Return a list of objects that intersect that at the specified viewer position.
+    *
+    * @param x - x position in screen coordinates
+    * @param y - y position in screen coordinates
+    * @param {Object[]} - list of objects or selection object specifying what object to check for targeting
+    */
     public targetedObjects(x: number, y: number, objects) {
         var mouse = {
             x: x,
             y: y,
-            z: -1.0,
+            z: -1.0
         };
-        if (!Array.isArray(objects)) {
-            //assume selection object
+        if (!Array.isArray(objects)) { //assume selection object
             objects = this.selectedAtoms(objects);
         }
         if (objects.length == 0) return [];
         this.raycaster.setFromCamera(mouse, this.camera);
         return this.raycaster.intersectObjects(this.modelGroup, objects);
-    }
+    };
 
     /** Convert model coordinates to screen coordinates.
      * @param {object | list} - an object or list of objects with x,y,z attributes (e.g. an atom)
@@ -910,40 +797,33 @@ export class GLViewer {
         let col = this.col;
         let row = this.row;
         let viewxoff = col * (this.WIDTH / ratioX);
-        //row is from bottom
+        //row is from bottom 
         let viewyoff = (ratioY - row - 1) * (this.HEIGHT / ratioY);
 
         let results = [];
         let offset = this.canvasOffset();
-        coords.forEach((coord) => {
+        coords.forEach(coord => {
             let t = new Vector3(coord.x, coord.y, coord.z);
             t.applyMatrix4(this.modelGroup.matrixWorld);
             this.projector.projectVector(t, this.camera);
-            let screenX =
-                ((this.WIDTH / ratioX) * (t.x + 1)) / 2.0 +
-                offset.left +
-                viewxoff;
-            let screenY =
-                (-(this.HEIGHT / ratioY) * (t.y - 1)) / 2.0 +
-                offset.top +
-                viewyoff;
+            let screenX = (this.WIDTH / ratioX) * (t.x + 1) / 2.0 + offset.left + viewxoff;
+            let screenY = -(this.HEIGHT / ratioY) * (t.y - 1) / 2.0 + offset.top + viewyoff;
             results.push({ x: screenX, y: screenY });
         });
         if (returnsingle) results = results[0];
         return results;
-    }
+    };
 
     /**
      * For a given screen (x,y) displacement return model displacement
      * @param{x} x displacement in screen coordinates
      * @param{y} y displacement in screen corodinates
      * @param{modelz} z coordinate in model coordinates to compute offset for, default is model axis
-     */
+    */
     public screenOffsetToModel(x: number, y: number, modelz?) {
         var dx = x / this.WIDTH;
         var dy = y / this.HEIGHT;
-        var zpos =
-            modelz === undefined ? this.rotationGroup.position.z : modelz;
+        var zpos = (modelz === undefined ? this.rotationGroup.position.z : modelz);
         var q = this.rotationGroup.quaternion;
         var t = new Vector3(0, 0, zpos);
         this.projector.projectVector(t, this.camera);
@@ -953,14 +833,14 @@ export class GLViewer {
         t.z = 0;
         t.applyQuaternion(q);
         return t;
-    }
+    };
 
     /**
      * Distance from screen coordinate to model coordinate assuming screen point
      * is projected to the same depth as model coordinate
      * @param{screen} xy screen coordinate
      * @param{model} xyz model coordinate
-     */
+    */
     public screenToModelDistance(screen: XYZ, model) {
         let offset = this.canvasOffset();
 
@@ -970,40 +850,36 @@ export class GLViewer {
         let m = mvec.clone();
         this.projector.projectVector(mvec, this.camera);
 
-        let t = new Vector3(
-            ((screen.x - offset.left) * 2) / this.WIDTH - 1,
-            ((screen.y - offset.top) * 2) / -this.HEIGHT + 1,
-            mvec.z
-        );
+        let t = new Vector3((screen.x - offset.left) * 2 / this.WIDTH - 1, (screen.y - offset.top) * 2 / -this.HEIGHT + 1, mvec.z);
         this.projector.unprojectVector(t, this.camera);
 
         return t.distanceTo(m);
-    }
+    };
 
     /**
      * Set a callback to call when the view has potentially changed.
      *
-     */
+    */
     public setViewChangeCallback(callback) {
-        if (typeof callback === "function" || callback == null)
+        if (typeof (callback) === 'function' || callback == null)
             this.viewChangeCallback = callback;
-    }
+    };
 
     /**
      * Set a callback to call when the view has potentially changed.
      *
-     */
+    */
     public setStateChangeCallback(callback) {
-        if (typeof callback === "function" || callback == null)
+        if (typeof (callback) === 'function' || callback == null)
             this.stateChangeCallback = callback;
-    }
+    };
 
     /**
      * Return configuration of viewer
      */
     public getConfig() {
         return this.config;
-    }
+    };
 
     /**
      * Set the configuration object.  Note that some settings may only
@@ -1014,15 +890,15 @@ export class GLViewer {
         if (c.ambientOcclusion) {
             this.renderer.enableAmbientOcclusion(c.ambientOcclusion);
         }
-    }
+    };
 
     /**
      * Return object representing internal state of
      * the viewer appropriate for passing to setInternalState
      *
-     */
+    */
     public getInternalState() {
-        var ret = { models: [], surfaces: [], shapes: [], labels: [] };
+        var ret = { 'models': [], 'surfaces': [], 'shapes': [], 'labels': [] };
         for (let i = 0; i < this.models.length; i++) {
             if (this.models[i]) {
                 ret.models[i] = this.models[i].getInternalState();
@@ -1032,14 +908,15 @@ export class GLViewer {
         //todo: labels, shapes, surfaces
 
         return ret;
-    }
+    };
 
     /**
      * Overwrite internal state of the viewer with passed  object
      * which should come from getInternalState.
      *
-     */
+    */
     public setInternalState(state) {
+
         //clear out current viewer
         this.clear();
 
@@ -1047,14 +924,14 @@ export class GLViewer {
         var newm = state.models;
         for (let i = 0; i < newm.length; i++) {
             if (newm[i]) {
-                this.models[i] = new GLModel(i, undefined, this);
+                this.models[i] = new GLModel(i,undefined,this);
                 this.models[i].setInternalState(newm[i]);
             }
         }
 
         //todo: labels, shapes, surfaces
         this.render();
-    }
+    };
 
     /**
      * Set lower and upper limit stops for zoom.
@@ -1072,13 +949,11 @@ export class GLViewer {
         });
     */
     public setZoomLimits(lower, upper) {
-        if (typeof lower !== "undefined") this.config.lowerZoomLimit = lower;
+        if (typeof (lower) !== 'undefined') this.config.lowerZoomLimit = lower;
         if (upper) this.config.upperZoomLimit = upper;
-        this.rotationGroup.position.z = this.adjustZoomToLimits(
-            this.rotationGroup.position.z
-        );
+        this.rotationGroup.position.z = this.adjustZoomToLimits(this.rotationGroup.position.z);
         this.show();
-    }
+    };
 
     /**
      * Set camera parameters (distance to the origin and field of view)
@@ -1110,21 +985,24 @@ export class GLViewer {
             this.camera.ortho = parameters.orthographic;
         }
         this.setSlabAndFog();
-    }
+    };
 
     public _handleMouseDown(ev) {
         ev.preventDefault();
-        if (!this.scene) return;
+        if (!this.scene)
+            return;
         var x = this.getX(ev);
         var y = this.getY(ev);
-        if (x === undefined) return;
+        if (x === undefined)
+            return;
         this.isDragging = true;
         this.mouseButton = ev.which;
         this.mouseStartX = x;
         this.mouseStartY = y;
         this.touchHold = true;
         this.touchDistanceStart = 0;
-        if (ev.targetTouches && ev.targetTouches.length == 2) {
+        if (ev.targetTouches &&
+            ev.targetTouches.length == 2) {
             this.touchDistanceStart = this.calcTouchDistance(ev);
         }
         this.cq = this.rotationGroup.quaternion.clone();
@@ -1140,30 +1018,29 @@ export class GLViewer {
                     // console.log('Touch hold', x,y);
                     self.glDOM = self.renderer.domElement;
                     const touch = ev.targetTouches[0];
-                    const newEvent = new PointerEvent("contextmenu", {
+                    const newEvent = new PointerEvent('contextmenu', {
                         ...ev,
-                        pageX: touch.pageX,
-                        pageY: touch.pageY,
-                        screenX: touch.screenX,
-                        screenY: touch.screenY,
-                        clientX: touch.clientX,
-                        clientY: touch.clientY,
+                        pageX: touch.pageX, pageY: touch.pageY,
+                        screenX: touch.screenX, screenY: touch.screenY,
+                        clientX: touch.clientX, clientY: touch.clientY,
                     });
                     self.glDOM.dispatchEvent(newEvent);
-                } else {
+                }
+                else {
                     // console.log('Touch hold ended earlier');
+
                 }
             }, this.longTouchDuration);
         }
-    }
+
+    };
 
     public _handleMouseUp(ev) {
         // handle touch
         this.touchHold = false;
 
         // handle selection
-        if (this.isDragging && this.scene) {
-            //saw mousedown, haven't moved
+        if (this.isDragging && this.scene) { //saw mousedown, haven't moved
             var x = this.getX(ev);
             var y = this.getY(ev);
             if (this.closeEnoughForClick(ev) && this.isInViewer(x, y)) {
@@ -1175,44 +1052,41 @@ export class GLViewer {
         this.isDragging = false;
     }
 
-    public _handleMouseScroll(ev) {
-        // Zoom
+    public _handleMouseScroll(ev) { // Zoom
         ev.preventDefault();
-        if (!this.scene) return;
+        if (!this.scene)
+            return;
 
         var x = this.getX(ev);
         var y = this.getY(ev);
-        if (x === undefined) return;
+        if (x === undefined)
+            return;
         if (!this.control_all && !this.isInViewer(x, y)) {
             return;
         }
 
-        var scaleFactor =
-            (this.CAMERA_Z - this.rotationGroup.position.z) * 0.85;
+        var scaleFactor = (this.CAMERA_Z - this.rotationGroup.position.z) * 0.85;
         var mult = 1.0;
         if (ev.ctrlKey) {
             mult = -1.0; //this is a pinch event turned into a wheel event (or they're just holding down the ctrl)
         }
         if (ev.detail) {
-            this.rotationGroup.position.z +=
-                (mult * scaleFactor * ev.detail) / 10;
+            this.rotationGroup.position.z += mult * scaleFactor * ev.detail / 10;
         } else if (ev.wheelDelta) {
             //dampen the wheelDelta since some browser/OS/mouse combinations can be quite large
-            let wd = (ev.wheelDelta * 600) / (ev.wheelDelta + 600);
-            this.rotationGroup.position.z -= (mult * scaleFactor * wd) / 400;
+            let wd = ev.wheelDelta * 600 / (ev.wheelDelta + 600);
+            this.rotationGroup.position.z -= mult * scaleFactor * wd / 400;
         }
-        this.rotationGroup.position.z = this.adjustZoomToLimits(
-            this.rotationGroup.position.z
-        );
+        this.rotationGroup.position.z = this.adjustZoomToLimits(this.rotationGroup.position.z);
         this.show();
-    }
+    };
 
     /**
      * Return image URI of viewer contents (base64 encoded).     *
      */
     public pngURI() {
-        return this.getCanvas().toDataURL("image/png");
-    }
+        return this.getCanvas().toDataURL('image/png');
+    };
 
     /**
      * Return a promise that resolves to an animated PNG image URI of
@@ -1231,13 +1105,11 @@ export class GLViewer {
             viewer.viewChangeCallback = function () {
                 delays.push(Date.now() - lasttime);
                 lasttime = Date.now();
-                bufpromise.push(
-                    new Promise((resolve) => {
-                        viewer.getCanvas().toBlob(function (blob) {
-                            blob.arrayBuffer().then(resolve);
-                        }, "image/png");
-                    })
-                );
+                bufpromise.push(new Promise(resolve => {
+                    viewer.getCanvas().toBlob(function (blob) {
+                        blob.arrayBuffer().then(resolve);
+                    }, "image/png");
+                }));
                 framecnt += 1;
                 if (framecnt == nframes) {
                     viewer.viewChangeCallback = oldcb;
@@ -1253,7 +1125,7 @@ export class GLViewer {
                         let width = viewer.getCanvas().width;
                         let height = viewer.getCanvas().height;
                         let apng = encode(rgbas, width, height, 0, delays);
-                        let blob = new Blob([apng], { type: "image/png" });
+                        let blob = new Blob([apng], { type: 'image/png' });
                         let fr = new FileReader();
                         fr.onload = function (e) {
                             resolve(e.target.result);
@@ -1263,33 +1135,35 @@ export class GLViewer {
                 }
             };
         });
-    }
+
+    };
+
 
     /**
      * Return underlying canvas element.
      */
     public getCanvas(): HTMLCanvasElement {
         return this.glDOM;
-    }
+    };
 
     /**
      * Return renderer element.
      */
     public getRenderer() {
         return this.renderer;
-    }
+    };
 
     /**
-     * Set the duration of the hover delay
-     *
-     * @param {number}
-     *            [hoverDuration] - an optional parameter that denotes
-     *            the duration of the hover delay (in milliseconds) before the hover action is called
-     *
+         * Set the duration of the hover delay
+         *
+         * @param {number}
+         *            [hoverDuration] - an optional parameter that denotes
+         *            the duration of the hover delay (in milliseconds) before the hover action is called
+         *
      */
     public setHoverDuration(duration?: number) {
         this.hoverDuration = duration;
-    }
+    };
 
     private mouseXY(x, y) {
         //convert to -1..1 coordinates
@@ -1300,26 +1174,25 @@ export class GLViewer {
         let col = this.col;
         let row = this.row;
         let viewxoff = col * (this.WIDTH / ratioX);
-        //row is from bottom
+        //row is from bottom 
         let viewyoff = (ratioY - row - 1) * (this.HEIGHT / ratioY);
 
-        let mouseX =
-            ((x - offset.left - viewxoff) / (this.WIDTH / ratioX)) * 2 - 1;
-        let mouseY =
-            -((y - offset.top - viewyoff) / (this.HEIGHT / ratioY)) * 2 + 1;
+        let mouseX = ((x - offset.left - viewxoff) / (this.WIDTH / ratioX)) * 2 - 1;
+        let mouseY = -((y - offset.top - viewyoff) / (this.HEIGHT / ratioY)) * 2 + 1;
 
         return { x: mouseX, y: mouseY };
     }
 
-    public _handleMouseMove(ev) {
-        // touchmove
+    public _handleMouseMove(ev) { // touchmove
 
         clearTimeout(this.hoverTimeout);
         ev.preventDefault();
 
+
         let x = this.getX(ev);
         let y = this.getY(ev);
-        if (x === undefined) return;
+        if (x === undefined)
+            return;
 
         let ratioX = this.renderer.getXRatio();
         let ratioY = this.renderer.getYRatio();
@@ -1337,41 +1210,38 @@ export class GLViewer {
             return;
         }
 
-        if (!this.scene) return;
+        if (!this.scene)
+            return;
 
         if (this.hoverables.length > 0) {
-            this.hoverTimeout = setTimeout(function () {
-                self.handleHoverSelection(mouse.x, mouse.y, ev);
-            }, this.hoverDuration);
+            this.hoverTimeout = setTimeout(
+                function () {
+                    self.handleHoverSelection(mouse.x, mouse.y, ev);
+                },
+                this.hoverDuration);
         }
 
-        if (!this.isDragging) return;
+        if (!this.isDragging)
+            return;
 
         // Cancel longtouch timer to avoid invoking context menu if dragged away from start
-        if (
-            ev.targetTouches &&
-            (ev.targetTouches.length > 1 ||
-                (ev.targetTouches.length === 1 &&
-                    !this.closeEnoughForClick(ev)))
-        ) {
+        if (ev.targetTouches && (ev.targetTouches.length > 1 ||
+            (ev.targetTouches.length === 1 && !this.closeEnoughForClick(ev)))) {
             clearTimeout(this.longTouchTimeout);
         }
 
         var dx = (x - this.mouseStartX) / this.WIDTH;
         var dy = (y - this.mouseStartY) / this.HEIGHT;
         // check for pinch
-        if (
-            this.touchDistanceStart != 0 &&
+        if (this.touchDistanceStart != 0 &&
             ev.targetTouches &&
-            ev.targetTouches.length == 2
-        ) {
+            ev.targetTouches.length == 2) {
             var newdist = this.calcTouchDistance(ev);
             // change to zoom
             mode = 2;
-            dy =
-                ((newdist - this.touchDistanceStart) * 2) /
-                (this.WIDTH + this.HEIGHT);
-        } else if (ev.targetTouches && ev.targetTouches.length == 3) {
+            dy = (newdist - this.touchDistanceStart) * 2 / (this.WIDTH + this.HEIGHT);
+        } else if (ev.targetTouches &&
+            ev.targetTouches.length == 3) {
             // translate
             mode = 1;
         }
@@ -1380,28 +1250,20 @@ export class GLViewer {
         dy *= ratioY;
         var r = Math.hypot(dx, dy);
         var scaleFactor;
-        if (mode == 3 || (this.mouseButton == 3 && ev.ctrlKey)) {
-            // Slab
+        if (mode == 3 || (this.mouseButton == 3 && ev.ctrlKey)) { // Slab
             this.slabNear = this.cslabNear + dx * 100;
             this.slabFar = this.cslabFar - dy * 100;
-        } else if (mode == 2 || this.mouseButton == 3 || ev.shiftKey) {
-            // Zoom
-            scaleFactor =
-                (this.CAMERA_Z - this.rotationGroup.position.z) * 0.85;
-            if (scaleFactor < 80) scaleFactor = 80;
+        } else if (mode == 2 || this.mouseButton == 3 || ev.shiftKey) { // Zoom
+            scaleFactor = (this.CAMERA_Z - this.rotationGroup.position.z) * 0.85;
+            if (scaleFactor < 80)
+                scaleFactor = 80;
             this.rotationGroup.position.z = this.cz + dy * scaleFactor;
-            this.rotationGroup.position.z = this.adjustZoomToLimits(
-                this.rotationGroup.position.z
-            );
-        } else if (mode == 1 || this.mouseButton == 2 || ev.ctrlKey) {
-            // Translate
-            var t = this.screenOffsetToModel(
-                ratioX * (x - this.mouseStartX),
-                ratioY * (y - this.mouseStartY)
-            );
+            this.rotationGroup.position.z = this.adjustZoomToLimits(this.rotationGroup.position.z);
+        } else if (mode == 1 || this.mouseButton == 2 || ev.ctrlKey) { // Translate
+            var t = this.screenOffsetToModel(ratioX * (x - this.mouseStartX), ratioY * (y - this.mouseStartY));
             this.modelGroup.position.addVectors(this.currentModelPos, t);
-        } else if ((mode === 0 || this.mouseButton == 1) && r !== 0) {
-            // Rotate
+
+        } else if ((mode === 0 || this.mouseButton == 1) && r !== 0) { // Rotate
             var rs = Math.sin(r * Math.PI) / r;
             this.dq.x = Math.cos(r * Math.PI);
             this.dq.y = 0;
@@ -1412,7 +1274,7 @@ export class GLViewer {
             this.rotationGroup.quaternion.multiply(this.cq);
         }
         this.show();
-    }
+    };
 
     /** User specified function for handling a context menu event.
      * Handler is passed the selected object, x and y in canvas coordinates,
@@ -1430,11 +1292,7 @@ export class GLViewer {
             let mouseX = mouse.x;
             let mouseY = mouse.y;
 
-            let intersects = this.targetedObjects(
-                mouseX,
-                mouseY,
-                this.contextMenuEnabledObjects
-            );
+            let intersects = this.targetedObjects(mouseX, mouseY, this.contextMenuEnabledObjects);
             var selected = null;
             if (intersects.length) {
                 selected = intersects[0].clickable;
@@ -1451,7 +1309,8 @@ export class GLViewer {
                 this.isDragging = false;
             }
         }
-    }
+    };
+
 
     /**
      * Change the viewer's container element
@@ -1465,7 +1324,7 @@ export class GLViewer {
         let elem = getElement(element) || this.container;
         this.initContainer(elem);
         return this;
-    }
+    };
 
     /**
      * Set the background color (default white)
@@ -1483,9 +1342,10 @@ export class GLViewer {
      *
      */
     public setBackgroundColor(hex: ColorSpec, a: number) {
-        if (typeof a == "undefined") {
+        if (typeof (a) == "undefined") {
             a = 1.0;
-        } else if (a < 0 || a > 1.0) {
+        }
+        else if (a < 0 || a > 1.0) {
             a = 1.0;
         }
         var c = CC.color(hex);
@@ -1495,7 +1355,7 @@ export class GLViewer {
         this.show();
 
         return this;
-    }
+    };
 
     /**
      * Set view projection scheme.  Either orthographic or perspective.
@@ -1518,9 +1378,9 @@ export class GLViewer {
      *
      */
     public setProjection(proj) {
-        this.camera.ortho = proj === "orthographic";
+        this.camera.ortho = (proj === "orthographic");
         this.setSlabAndFog();
-    }
+    };
 
     /**
      * Set global view styles.
@@ -1555,7 +1415,8 @@ export class GLViewer {
             this.renderer.disableAmbientOcclusion();
         }
         return this;
-    }
+    };
+
 
     private updateSize() {
         this.renderer.setSize(this.WIDTH, this.HEIGHT);
@@ -1573,7 +1434,7 @@ export class GLViewer {
         this.WIDTH = w || this.WIDTH;
         this.updateSize();
         return this;
-    }
+    };
 
     /**
      * Set viewer height independently of the HTML container.  This is probably not what you want.
@@ -1584,7 +1445,7 @@ export class GLViewer {
         this.HEIGHT = h || this.HEIGHT;
         this.updateSize();
         return this;
-    }
+    };
 
     /**
      * Resize viewer according to containing HTML element's dimensions
@@ -1597,7 +1458,7 @@ export class GLViewer {
         if (this.renderer.isLost() && this.WIDTH > 0 && this.HEIGHT > 0) {
             //create new context
             let resetcanvas = false;
-            let currentcanvas = this.container.querySelector("canvas");
+            let currentcanvas = this.container.querySelector('canvas');
             if (currentcanvas && currentcanvas != this.renderer.getCanvas()) {
                 //canvas has been replaced, use new one
                 this.config.canvas = currentcanvas;
@@ -1610,10 +1471,7 @@ export class GLViewer {
             }
             this.setupRenderer();
             this.initContainer(this.container);
-            this.renderer.setClearColorHex(
-                this.bgColor,
-                this.config.backgroundAlpha
-            );
+            this.renderer.setClearColorHex(this.bgColor, this.config.backgroundAlpha);
 
             regen = true;
             if (resetcanvas) {
@@ -1627,8 +1485,7 @@ export class GLViewer {
         }
         this.updateSize();
 
-        if (regen) {
-            //restored rendere, need to regenerate scene
+        if (regen) { //restored rendere, need to regenerate scene
             let options = this.renderer.supportedExtensions();
             options.regen = true;
             if (this.viewers) {
@@ -1644,7 +1501,8 @@ export class GLViewer {
         }
 
         return this;
-    }
+    };
+
 
     /**
      * Return specified model
@@ -1667,19 +1525,20 @@ export class GLViewer {
      */
     public getModel(id?: number | GLModel) {
         if (id === undefined) {
-            return this.models.length == 0
-                ? null
-                : this.models[this.models.length - 1];
+            return this.models.length == 0 ? null : this.models[this.models.length - 1];
         }
         if (id instanceof GLModel) {
             return id;
         }
         if (!(id in this.models)) {
-            if (this.models.length == 0) return null;
-            else return this.models[this.models.length - 1]; //get last model if no (or invalid) id specified
+            if (this.models.length == 0)
+                return null;
+            else
+                return this.models[this.models.length - 1]; //get last model if no (or invalid) id specified
         }
         return this.models[id];
-    }
+    };
+
 
     /**
      * Continuously rotate a scene around the specified axis.
@@ -1698,10 +1557,13 @@ export class GLViewer {
      */
     public spin(axis, speed: number = 1, only_when_visable: boolean = false) {
         clearInterval(this.spinInterval);
-        if (typeof axis == "undefined") axis = "y";
+        if (typeof axis == 'undefined')
+            axis = 'y';
         if (typeof axis == "boolean") {
-            if (!axis) return;
-            else axis = "y";
+            if (!axis)
+                return;
+            else
+                axis = 'y';
         }
 
         if (Array.isArray(axis)) {
@@ -1711,19 +1573,17 @@ export class GLViewer {
 
         var viewer = this;
 
-        this.spinInterval = setInterval(function () {
-            if (!viewer.getCanvas().isConnected && viewer.renderer.isLost()) {
-                clearInterval(viewer.spinInterval);
-            }
-            if (
-                !only_when_visable ||
-                (viewer.container.checkVisibility &&
-                    viewer.container.checkVisibility())
-            ) {
-                viewer.rotate(1 * speed, axis);
-            }
-        }, 25);
-    }
+        this.spinInterval = setInterval(
+            function () {
+                if (!viewer.getCanvas().isConnected && viewer.renderer.isLost()) {
+                    clearInterval(viewer.spinInterval);
+                }
+                if (!only_when_visable || (viewer.container.checkVisibility && viewer.container.checkVisibility())) {
+                    viewer.rotate(1 * speed, axis);
+                }
+            }, 25);
+
+    };
 
     //animate motion between current position and passed position
     // can set some parameters to null
@@ -1733,14 +1593,7 @@ export class GLViewer {
     //and rotationgroup quaternion
     //return array includes final position, but not current
     //the returned array includes an animate method
-    private animateMotion(
-        duration: number,
-        fixed: boolean,
-        mpos: Vector3,
-        rz: number,
-        rot: Quaternion,
-        cam: Vector3
-    ) {
+    private animateMotion(duration: number, fixed: boolean, mpos: Vector3, rz: number, rot: Quaternion, cam: Vector3) {
         var interval = 20;
         var nsteps: number = Math.ceil(duration / interval);
         if (nsteps < 1) nsteps = 1;
@@ -1750,27 +1603,18 @@ export class GLViewer {
             mpos: this.modelGroup.position.clone(),
             rz: this.rotationGroup.position.z,
             rot: this.rotationGroup.quaternion.clone(),
-            cam: this.lookingAt.clone(),
+            cam: this.lookingAt.clone()
         };
 
-        if (fixed) {
-            //precompute path and stick to it
+        if (fixed) { //precompute path and stick to it
             let steps = new Array(nsteps);
             for (let i = 0; i < nsteps; i++) {
                 let frac = (i + 1) / nsteps;
                 let next: any = { mpos: curr.mpos, rz: curr.rz, rot: curr.rot };
-                next.mpos = mpos
-                    .clone()
-                    .sub(curr.mpos)
-                    .multiplyScalar(frac)
-                    .add(curr.mpos);
+                next.mpos = mpos.clone().sub(curr.mpos).multiplyScalar(frac).add(curr.mpos);
                 next.rz = curr.rz + frac * (rz - curr.rz);
                 next.rot = GLViewer.slerp(curr.rot, rot, frac);
-                next.cam = cam
-                    .clone()
-                    .sub(curr.cam)
-                    .multiplyScalar(frac)
-                    .add(curr.cam);
+                next.cam = cam.clone().sub(curr.cam).multiplyScalar(frac).add(curr.cam);
                 steps[i] = next;
             }
 
@@ -1792,14 +1636,14 @@ export class GLViewer {
                 self.show();
             };
             setTimeout(callback, interval);
-        } else {
-            //relative update
+
+        } else { //relative update
             var delta: any = {};
             let frac = 1.0 / nsteps;
             if (mpos) {
                 delta.mpos = mpos.clone().sub(curr.mpos).multiplyScalar(frac);
             }
-            if (typeof rz != "undefined" && rz != null) {
+            if (typeof (rz) != 'undefined' && rz != null) {
                 delta.rz = frac * (rz - curr.rz);
             }
             if (rot) {
@@ -1837,7 +1681,7 @@ export class GLViewer {
             };
             setTimeout(callback, interval);
         }
-    }
+    };
 
     /**
      * Rotate scene by angle degrees around axis
@@ -1862,12 +1706,8 @@ export class GLViewer {
 
      *
      */
-    public rotate(
-        angle: number,
-        axis: any = "y",
-        animationDuration: number = 0,
-        fixedPath: boolean = false
-    ) {
+    public rotate(angle: number, axis: any = "y", animationDuration: number = 0, fixedPath: boolean = false) {
+
         if (axis == "x") {
             axis = { x: 1, y: 0, z: 0 };
         } else if (axis == "y") {
@@ -1885,7 +1725,7 @@ export class GLViewer {
             axis = { vx: 0, vy: 0, vz: 1 };
         }
 
-        if (typeof axis.vx !== "undefined") {
+        if (typeof (axis.vx) !== 'undefined') {
             var vaxis = new Vector3(axis.vx, axis.vy, axis.vz);
             vaxis.applyQuaternion(this.rotationGroup.quaternion);
             axis = { x: vaxis.x, y: vaxis.y, z: vaxis.z };
@@ -1894,9 +1734,7 @@ export class GLViewer {
         var qFromAngle = function (rangle) {
             var s = Math.sin(rangle / 2.0);
             var c = Math.cos(rangle / 2.0);
-            var i = 0,
-                j = 0,
-                k = 0;
+            var i = 0, j = 0, k = 0;
 
             i = axis.x * s;
             j = axis.y * s;
@@ -1905,28 +1743,23 @@ export class GLViewer {
             return new Quaternion(i, j, k, c).normalize();
         };
 
-        var rangle = (Math.PI * angle) / 180.0;
+        var rangle = Math.PI * angle / 180.0;
         var q = qFromAngle(rangle);
 
         if (animationDuration) {
-            var final = new Quaternion()
-                .copy(this.rotationGroup.quaternion)
-                .multiply(q); //final
-            this.animateMotion(
-                animationDuration,
-                fixedPath,
+            var final = new Quaternion().copy(this.rotationGroup.quaternion).multiply(q);//final
+            this.animateMotion(animationDuration, fixedPath,
                 this.modelGroup.position,
                 this.rotationGroup.position.z,
                 final,
-                this.lookingAt
-            );
-        } else {
-            //not animated
+                this.lookingAt);
+        } else { //not animated
             this.rotationGroup.quaternion.multiply(q);
             this.show();
         }
         return this;
-    }
+
+    };
 
     public surfacesFinished() {
         for (var key in this.surfaces) {
@@ -1935,36 +1768,32 @@ export class GLViewer {
             }
         }
         return true;
-    }
+    };
 
     /** Returns an array representing the current viewpoint.
      * Translation, zoom, and rotation quaternion.
      * @returns {Array.<number>} [ pos.x, pos.y, pos.z, rotationGroup.position.z, q.x, q.y, q.z, q.w ]
      *  */
     public getView() {
-        if (!this.modelGroup) return [0, 0, 0, 0, 0, 0, 0, 1];
+        if (!this.modelGroup)
+            return [0, 0, 0, 0, 0, 0, 0, 1];
         var pos = this.modelGroup.position;
         var q = this.rotationGroup.quaternion;
-        return [
-            pos.x,
-            pos.y,
-            pos.z,
-            this.rotationGroup.position.z,
-            q.x,
-            q.y,
-            q.z,
-            q.w,
-        ];
-    }
+        return [pos.x, pos.y, pos.z, this.rotationGroup.position.z, q.x, q.y,
+        q.z, q.w];
+    };
 
     /** Sets the view to the specified translation, zoom, and rotation.
      *
      * @param {Array.<number>} arg Array formatted identically to the return value of getView */
     public setView(arg, nolink?) {
-        if (arg === undefined || !(arg instanceof Array || arg.length !== 8))
+
+        if (arg === undefined ||
+            !(arg instanceof Array || arg.length !== 8))
             return this;
 
-        if (!this.modelGroup || !this.rotationGroup) return this;
+        if (!this.modelGroup || !this.rotationGroup)
+            return this;
         this.modelGroup.position.x = arg[0];
         this.modelGroup.position.y = arg[1];
         this.modelGroup.position.z = arg[2];
@@ -1973,14 +1802,15 @@ export class GLViewer {
         this.rotationGroup.quaternion.y = arg[5];
         this.rotationGroup.quaternion.z = arg[6];
         this.rotationGroup.quaternion.w = arg[7];
-        if (typeof arg[8] != "undefined") {
+        if (typeof (arg[8]) != "undefined") {
             this.rotationGroup.position.x = arg[8];
             this.rotationGroup.position.y = arg[9];
         }
 
         this.show(nolink);
         return this;
-    }
+
+    };
 
     // apply styles, models, etc in viewer
     /**
@@ -2007,17 +1837,11 @@ export class GLViewer {
         }
 
         for (i = 0; i < this.shapes.length; i++) {
-            if (this.shapes[i]) {
-                //exists
-                if (
-                    typeof this.shapes[i].frame === "undefined" ||
-                    this.viewer_frame < 0 ||
-                    this.shapes[i].frame < 0 ||
-                    this.shapes[i].frame == this.viewer_frame
-                ) {
+            if (this.shapes[i]) { //exists
+                if ((typeof (this.shapes[i].frame) === 'undefined' || this.viewer_frame < 0 ||
+                    this.shapes[i].frame < 0 || this.shapes[i].frame == this.viewer_frame)) {
                     this.shapes[i].globj(this.modelGroup, exts);
-                } else {
-                    //should not be displayed in current frame
+                } else { //should not be displayed in current frame
                     this.shapes[i].removegl(this.modelGroup);
                 }
             }
@@ -2030,24 +1854,15 @@ export class GLViewer {
                 this.labels[i].setContext();
                 this.modelGroup.add(this.labels[i].sprite);
             }
-            if (
-                this.labels[i] &&
-                typeof this.labels[i].frame != "undefined" &&
-                this.labels[i].frame >= 0
-            ) {
-                //exists and has frame specifier
+            if (this.labels[i] && typeof (this.labels[i].frame) != 'undefined' && this.labels[i].frame >= 0) { //exists and has frame specifier
                 this.modelGroup.remove(this.labels[i].sprite);
-                if (
-                    this.viewer_frame < 0 ||
-                    this.labels[i].frame == this.viewer_frame
-                ) {
+                if (this.viewer_frame < 0 || this.labels[i].frame == this.viewer_frame) {
                     this.modelGroup.add(this.labels[i].sprite);
                 }
             }
         }
 
-        for (i in this.surfaces) {
-            // this is an object with possible holes
+        for (i in this.surfaces) { // this is an object with possible holes
             if (!this.surfaces.hasOwnProperty(i)) continue;
             var surfArr = this.surfaces[i];
             for (n = 0; n < surfArr.length; n++) {
@@ -2079,29 +1894,22 @@ export class GLViewer {
                         if (surfArr[n].mat instanceof LineBasicMaterial) {
                             //special case line meshes
                             smesh = new Line(geo, surfArr[n].mat);
-                        } else {
-                            if (
-                                "wireframe" in surfArr.style &&
-                                surfArr.style.wireframe
-                            ) {
+                        }
+                        else {
+                            if ('wireframe' in surfArr.style && surfArr.style.wireframe) {
                                 geo.setUpWireframe();
                             }
                             smesh = new Mesh(geo, surfArr[n].mat);
                         }
-                        if (
-                            surfArr[n].mat.transparent &&
-                            surfArr[n].mat.opacity == 0
-                        ) {
+                        if (surfArr[n].mat.transparent && surfArr[n].mat.opacity == 0) {
                             //don't bother with hidden surfaces
                             smesh.visible = false;
                         } else {
                             smesh.visible = true;
                         }
-                        if (
-                            surfArr[n].symmetries.length > 1 ||
+                        if (surfArr[n].symmetries.length > 1 ||
                             (surfArr[n].symmetries.length == 1 &&
-                                !surfArr[n].symmetries[0].isIdentity())
-                        ) {
+                                !(surfArr[n].symmetries[0].isIdentity()))) {
                             var j;
                             var tmeshes = new Object3D(); //transformed meshes
                             for (j = 0; j < surfArr[n].symmetries.length; j++) {
@@ -2112,7 +1920,8 @@ export class GLViewer {
                             }
                             surfArr[n].lastGL = tmeshes;
                             this.modelGroup.add(tmeshes);
-                        } else {
+                        }
+                        else {
                             surfArr[n].lastGL = smesh;
                             this.modelGroup.add(smesh);
                         }
@@ -2122,29 +1931,30 @@ export class GLViewer {
         }
 
         this.setView(view); // Calls show() => renderer render
-        if (typeof callback === "function") {
+        if (typeof callback === 'function') {
             callback(this);
         }
         return this;
-    }
+    };
 
     /* @param {AtomSelectionSpec|any} sel
      * @return list of models specified by sel
      */
     private getModelList(sel: any): GLModel[] {
         let ms: GLModel[] = [];
-        if (typeof sel === "undefined" || typeof sel.model === "undefined") {
+        if (typeof sel === 'undefined' || typeof sel.model === "undefined") {
             for (let i = 0; i < this.models.length; i++) {
-                if (this.models[i]) ms.push(this.models[i]);
+                if (this.models[i])
+                    ms.push(this.models[i]);
             }
-        } else {
-            // specific to some models
+        } else { // specific to some models
             let selm: any = sel.model;
-            if (!Array.isArray(selm)) selm = [selm];
+            if (!Array.isArray(selm))
+                selm = [selm];
 
             for (let i = 0; i < selm.length; i++) {
                 //allow referencing models by order of creation
-                if (typeof selm[i] === "number") {
+                if (typeof selm[i] === 'number') {
                     var index = selm[i];
                     //support python backward indexing
                     if (index < 0) index += this.models.length;
@@ -2165,7 +1975,8 @@ export class GLViewer {
      */
     private getAtomsFromSel(sel: AtomSelectionSpec): AtomSpec[] {
         var atoms = [];
-        if (typeof sel === "undefined") sel = {};
+        if (typeof (sel) === "undefined")
+            sel = {};
 
         var ms = this.getModelList(sel);
 
@@ -2185,16 +1996,19 @@ export class GLViewer {
      * @return {boolean}
      */
     private atomIsSelected(atom: AtomSpec, sel: AtomSelectionSpec) {
-        if (typeof sel === "undefined") sel = {};
+        if (typeof (sel) === "undefined")
+            sel = {};
 
         var ms = this.getModelList(sel);
 
         for (var i = 0; i < ms.length; i++) {
-            if (ms[i].atomIsSelected(atom, sel)) return true;
+            if (ms[i].atomIsSelected(atom, sel))
+                return true;
         }
 
         return false;
     }
+
 
     /** return list of atoms selected by sel
      *
@@ -2203,17 +2017,18 @@ export class GLViewer {
      */
     public selectedAtoms(sel: AtomSelectionSpec): AtomSpec[] {
         return this.getAtomsFromSel(sel);
-    }
+    };
 
     /**
-     * Returns valid values for the specified attribute in the given selection
-     * @param {string} attribute
-     * @param {AtomSelectionSpec} sel
-     * @return {Array.<Object>}
-     *
-     */
+    * Returns valid values for the specified attribute in the given selection
+    * @param {string} attribute
+    * @param {AtomSelectionSpec} sel
+    * @return {Array.<Object>}
+    *
+    */
     public getUniqueValues(attribute: string, sel?: AtomSelectionSpec) {
-        if (typeof sel === "undefined") sel = {};
+        if (typeof (sel) === "undefined")
+            sel = {};
         var atoms = this.getAtomsFromSel(sel);
         var values = {};
 
@@ -2225,7 +2040,7 @@ export class GLViewer {
         }
 
         return Object.keys(values);
-    }
+    };
 
     /**
      * Return pdb output of selected atoms (if atoms from pdb input)
@@ -2240,7 +2055,8 @@ export class GLViewer {
             ret += atoms[i].pdbline + "\n";
         }
         return ret;
-    }
+    };
+
 
     /**
      * Zoom current view by a constant factor
@@ -2263,30 +2079,22 @@ export class GLViewer {
     });
 
          */
-    public zoom(
-        factor: number = 2,
-        animationDuration: number = 0,
-        fixedPath: boolean = false
-    ) {
+    public zoom(factor: number = 2, animationDuration: number = 0, fixedPath: boolean = false) {
         var scale = (this.CAMERA_Z - this.rotationGroup.position.z) / factor;
         var final_z = this.CAMERA_Z - scale;
 
         if (animationDuration > 0) {
-            this.animateMotion(
-                animationDuration,
-                fixedPath,
+            this.animateMotion(animationDuration, fixedPath,
                 this.modelGroup.position,
                 this.adjustZoomToLimits(final_z),
                 this.rotationGroup.quaternion,
-                this.lookingAt
-            );
-        } else {
-            //no animation
+                this.lookingAt);
+        } else { //no animation
             this.rotationGroup.position.z = this.adjustZoomToLimits(final_z);
             this.show();
         }
         return this;
-    }
+    };
 
     /**
      * Translate current view by x,y screen coordinates
@@ -2308,12 +2116,7 @@ export class GLViewer {
     viewer.render(callback);
     });
      */
-    public translate(
-        x: number,
-        y: number,
-        animationDuration: number = 0,
-        fixedPath: boolean = false
-    ) {
+    public translate(x: number, y: number, animationDuration: number = 0, fixedPath: boolean = false) {
         var dx = x / this.WIDTH;
         var dy = y / this.HEIGHT;
         var v = new Vector3(0, 0, -this.CAMERA_Z);
@@ -2326,22 +2129,18 @@ export class GLViewer {
 
         var final_position = this.lookingAt.clone().add(v);
         if (animationDuration > 0) {
-            this.animateMotion(
-                animationDuration,
-                fixedPath,
+            this.animateMotion(animationDuration, fixedPath,
                 this.modelGroup.position,
                 this.rotationGroup.position.z,
                 this.rotationGroup.quaternion,
-                final_position
-            );
-        } else {
-            //no animation
+                final_position);
+        } else { //no animation
             this.lookingAt = final_position;
             this.camera.lookAt(this.lookingAt);
             this.show();
         }
         return this;
-    }
+    };
 
     /**
      * Translate current models by x,y screen coordinates
@@ -2364,31 +2163,23 @@ export class GLViewer {
     viewer.render(callback);
     });
      */
-    public translateScene(
-        x: number,
-        y: number,
-        animationDuration: number = 0,
-        fixedPath = false
-    ) {
+    public translateScene(x: number, y: number, animationDuration: number = 0, fixedPath = false) {
+
         var t = this.screenOffsetToModel(x, y);
         var final_position = this.modelGroup.position.clone().add(t);
 
         if (animationDuration > 0) {
-            this.animateMotion(
-                animationDuration,
-                fixedPath,
+            this.animateMotion(animationDuration, fixedPath,
                 this.modelGroup.position,
                 this.rotationGroup.position.z,
                 this.rotationGroup.quaternion,
-                this.lookingAt
-            );
-        } else {
-            //no animation
+                this.lookingAt);
+        } else { //no animation
             this.modelGroup.position = final_position;
             this.show();
         }
         return this;
-    }
+    };
 
     /**
      * Adjust slab to fully enclose selection (default everything).
@@ -2416,14 +2207,15 @@ export class GLViewer {
             z = tmp[1][2] - tmp[0][2];
 
         var maxD = Math.hypot(x, y, z);
-        if (maxD < 5) maxD = 5;
+        if (maxD < 5)
+            maxD = 5;
 
         // use full bounding box for slab/fog
         this.slabNear = -maxD / 1.9;
         this.slabFar = maxD / 2;
 
         return this;
-    }
+    };
 
     /**
      * Re-center the viewer around the provided selection (unlike zoomTo, does not zoom).
@@ -2449,11 +2241,7 @@ export class GLViewer {
     viewer.render(callback);
     });
      */
-    public center(
-        sel: AtomSelectionSpec = {},
-        animationDuration: number = 0,
-        fixedPath: boolean = false
-    ) {
+    public center(sel: AtomSelectionSpec = {}, animationDuration: number = 0, fixedPath: boolean = false) {
         var allatoms, alltmp;
         var atoms = this.getAtomsFromSel(sel);
         var tmp = getExtent(atoms);
@@ -2462,11 +2250,7 @@ export class GLViewer {
             //include shapes when zooming to full scene
             //TODO: figure out a good way to specify shapes as part of a selection
             this.shapes.forEach((shape) => {
-                if (
-                    shape &&
-                    shape.boundingSphere &&
-                    shape.boundingSphere.center
-                ) {
+                if (shape && shape.boundingSphere && shape.boundingSphere.center) {
                     var c = shape.boundingSphere.center;
                     var r = shape.boundingSphere.radius;
                     if (r > 0) {
@@ -2485,7 +2269,9 @@ export class GLViewer {
             tmp = getExtent(atoms);
             allatoms = atoms;
             alltmp = tmp;
-        } else {
+
+        }
+        else {
             allatoms = this.getAtomsFromSel({});
             alltmp = getExtent(allatoms);
         }
@@ -2494,12 +2280,12 @@ export class GLViewer {
         var center = new Vector3(tmp[2][0], tmp[2][1], tmp[2][2]);
 
         // but all for bounding box
-        var x = alltmp[1][0] - alltmp[0][0],
-            y = alltmp[1][1] - alltmp[0][1],
-            z = alltmp[1][2] - alltmp[0][2];
+        var x = alltmp[1][0] - alltmp[0][0], y = alltmp[1][1] -
+            alltmp[0][1], z = alltmp[1][2] - alltmp[0][2];
 
         var maxD = Math.hypot(x, y, z);
-        if (maxD < 5) maxD = 5;
+        if (maxD < 5)
+            maxD = 5;
 
         // use full bounding box for slab/fog
         this.slabNear = -maxD / 1.9;
@@ -2510,35 +2296,33 @@ export class GLViewer {
         y = tmp[1][1] - tmp[0][1];
         z = tmp[1][2] - tmp[0][2];
         maxD = Math.hypot(x, y, z);
-        if (maxD < 5) maxD = 5;
+        if (maxD < 5)
+            maxD = 5;
 
         //find the farthest atom from center to get max distance needed for view
         var maxDsq = 25;
         for (var i = 0; i < atoms.length; i++) {
             if (atoms[i]) {
                 var dsq = center.distanceToSquared(atoms[i] as XYZ);
-                if (dsq > maxDsq) maxDsq = dsq;
+                if (dsq > maxDsq)
+                    maxDsq = dsq;
             }
         }
 
         maxD = Math.sqrt(maxDsq) * 2;
         var finalpos = center.clone().multiplyScalar(-1);
         if (animationDuration > 0) {
-            this.animateMotion(
-                animationDuration,
-                fixedPath,
+            this.animateMotion(animationDuration, fixedPath,
                 finalpos,
                 this.rotationGroup.position.z,
                 this.rotationGroup.quaternion,
-                this.lookingAt
-            );
-        } else {
-            //no animation
+                this.lookingAt);
+        } else { //no animation
             this.modelGroup.position = finalpos;
             this.show();
         }
         return this;
-    }
+    };
 
     /**
      * Zoom to center of atom selection.  The slab will be set appropriately for
@@ -2569,11 +2353,7 @@ export class GLViewer {
               });
             });
      */
-    public zoomTo(
-        sel: AtomSelectionSpec = {},
-        animationDuration: number = 0,
-        fixedPath: boolean = false
-    ) {
+    public zoomTo(sel: AtomSelectionSpec = {}, animationDuration: number = 0, fixedPath: boolean = false) {
         let atoms = this.getAtomsFromSel(sel);
         let atombox = getExtent(atoms);
         let allbox = atombox;
@@ -2586,12 +2366,8 @@ export class GLViewer {
                 if (shape && shape.boundingSphere) {
                     if (shape.boundingSphere.box) {
                         let box = shape.boundingSphere.box;
-                        atoms.push(
-                            new Vector3(box.min.x, box.min.y, box.min.z)
-                        );
-                        atoms.push(
-                            new Vector3(box.max.x, box.max.y, box.max.z)
-                        );
+                        atoms.push(new Vector3(box.min.x, box.min.y, box.min.z));
+                        atoms.push(new Vector3(box.max.x, box.max.y, box.max.z));
                     } else if (shape.boundingSphere.center) {
                         var c = shape.boundingSphere.center;
                         var r = shape.boundingSphere.radius;
@@ -2610,15 +2386,12 @@ export class GLViewer {
                 }
             });
             allbox = getExtent(atoms);
-            if (!natoms) {
-                //if no atoms, use shapes for center
-                for (let i = 0; i < 3; i++) {
-                    //center of bounding box
+            if (!natoms) { //if no atoms, use shapes for center
+                for (let i = 0; i < 3; i++) { //center of bounding box
                     atombox[2][i] = (allbox[0][i] + allbox[1][i]) / 2;
                 }
             }
-        } else {
-            //include all atoms in slab calculation
+        } else { //include all atoms in slab calculation
             let allatoms = this.getAtomsFromSel({});
             allbox = getExtent(allatoms);
         }
@@ -2627,12 +2400,12 @@ export class GLViewer {
         var center = new Vector3(atombox[2][0], atombox[2][1], atombox[2][2]);
 
         // but all for bounding box
-        var x = allbox[1][0] - allbox[0][0],
-            y = allbox[1][1] - allbox[0][1],
-            z = allbox[1][2] - allbox[0][2];
+        var x = allbox[1][0] - allbox[0][0], y = allbox[1][1]
+            - allbox[0][1], z = allbox[1][2] - allbox[0][2];
 
         var maxD = Math.hypot(x, y, z);
-        if (maxD < 5) maxD = 5;
+        if (maxD < 5)
+            maxD = 5;
 
         // use full bounding box for slab/fog
         this.slabNear = -maxD / 1.9;
@@ -2652,41 +2425,39 @@ export class GLViewer {
         y = atombox[1][1] - atombox[0][1];
         z = atombox[1][2] - atombox[0][2];
         maxD = Math.hypot(x, y, z);
-        if (maxD < MAXD) maxD = MAXD;
+        if (maxD < MAXD)
+            maxD = MAXD;
 
         //find the farthest atom from center to get max distance needed for view
         var maxDsq = MAXD * MAXD;
         for (var i = 0; i < atoms.length; i++) {
             if (atoms[i]) {
                 var dsq = center.distanceToSquared(atoms[i] as XYZ);
-                if (dsq > maxDsq) maxDsq = dsq;
+                if (dsq > maxDsq)
+                    maxDsq = dsq;
             }
         }
 
         maxD = Math.sqrt(maxDsq) * 2;
         var finalpos = center.clone().multiplyScalar(-1);
-        var finalz = -(
-            (maxD * 0.5) / Math.tan(((Math.PI / 180.0) * this.camera.fov) / 2) -
-            this.CAMERA_Z
-        );
+        var finalz = -(maxD * 0.5
+            / Math.tan(Math.PI / 180.0 * this.camera.fov / 2) - this.CAMERA_Z);
 
         finalz = this.adjustZoomToLimits(finalz);
         if (animationDuration > 0) {
-            this.animateMotion(
-                animationDuration,
-                fixedPath,
+            this.animateMotion(animationDuration, fixedPath,
                 finalpos,
                 finalz,
                 this.rotationGroup.quaternion,
-                this.lookingAt
-            );
+                this.lookingAt);
         } else {
             this.modelGroup.position = finalpos;
             this.rotationGroup.position.z = finalz;
             this.show();
         }
         return this;
-    }
+
+    };
 
     /**
      * Set slab of view (contents outside of slab are clipped).
@@ -2698,7 +2469,7 @@ export class GLViewer {
     public setSlab(near: number, far: number) {
         this.slabNear = near;
         this.slabFar = far;
-    }
+    };
 
     /**
      * Get slab of view (contents outside of slab are clipped).
@@ -2709,7 +2480,7 @@ export class GLViewer {
      */
     public getSlab() {
         return { near: this.slabNear, far: this.slabFar };
-    }
+    };
 
     /**
      * Add label to viewer
@@ -2749,19 +2520,10 @@ export class GLViewer {
             });
 
      */
-    public addLabel(
-        text: string,
-        options: LabelSpec = {},
-        sel?: AtomSelectionSpec,
-        noshow: boolean = false
-    ) {
+    public addLabel(text: string, options: LabelSpec = {}, sel?: AtomSelectionSpec, noshow: boolean = false) {
         if (sel) {
             var extent = getExtent(this.getAtomsFromSel(sel));
-            options.position = {
-                x: extent[2][0],
-                y: extent[2][1],
-                z: extent[2][2],
-            };
+            options.position = { x: extent[2][0], y: extent[2][1], z: extent[2][2] };
         }
         var label = new Label(text, options);
         label.setContext();
@@ -2770,7 +2532,9 @@ export class GLViewer {
 
         if (!noshow) this.show();
         return label;
-    }
+    };
+
+
 
     /** Add residue labels.  This will generate one label per a
      * residue within the selected atoms.  The label will be at the
@@ -2789,16 +2553,12 @@ export class GLViewer {
               viewer.render();
             });
      */
-    public addResLabels(
-        sel: AtomSelectionSpec,
-        style: LabelSpec,
-        byframe: boolean = false
-    ) {
+    public addResLabels(sel: AtomSelectionSpec, style: LabelSpec, byframe: boolean = false) {
         let start = this.labels.length;
         this.applyToModels("addResLabels", sel, style, byframe);
         this.show();
         return this.labels.slice(start);
-    }
+    };
 
     /** Add property labels.  This will generate one label per a selected
      * atom at the atom's coordinates with the property value as the label text.
@@ -2815,15 +2575,11 @@ export class GLViewer {
               viewer.render();
             });
      */
-    public addPropertyLabels(
-        prop: string,
-        sel: AtomSelectionSpec,
-        style: LabelSpec
-    ) {
+    public addPropertyLabels(prop: string, sel: AtomSelectionSpec, style: LabelSpec) {
         this.applyToModels("addPropertyLabels", prop, sel, style);
         this.show();
         return this;
-    }
+    };
 
     /**
      * Remove label from viewer
@@ -2855,7 +2611,7 @@ export class GLViewer {
         }
         this.show();
         return this;
-    }
+    };
 
     /**
      * Remove all labels from viewer
@@ -2880,7 +2636,7 @@ export class GLViewer {
         this.labels.splice(0, this.labels.length); //don't overwrite in case linked
         this.show();
         return this;
-    }
+    };
 
     /**
      * Hide all labels in viewer
@@ -2904,7 +2660,7 @@ export class GLViewer {
         }
         this.show();
         return this;
-    }
+    };
 
     /**
      * Show all labels in viewer
@@ -2929,7 +2685,7 @@ export class GLViewer {
         }
         this.show();
         return this;
-    }
+    };
 
     // Modify label style
     /**
@@ -2948,7 +2704,8 @@ export class GLViewer {
         this.modelGroup.add(label.sprite);
         this.show();
         return label;
-    }
+
+    };
 
     // Change label text
     /**
@@ -2967,7 +2724,8 @@ export class GLViewer {
         this.modelGroup.add(label.sprite);
         this.show();
         return label;
-    }
+
+    };
 
     /**
      * Add shape object to viewer
@@ -2983,7 +2741,7 @@ export class GLViewer {
         this.shapes.push(shape);
 
         return shape;
-    }
+    };
 
     /**
      * Remove shape object from viewer
@@ -2991,17 +2749,16 @@ export class GLViewer {
      * @param {GLShape} shape - Reference to shape object to remove
      */
     public removeShape(shape: GLShape) {
-        if (!shape) return this;
+        if (!shape)
+            return this;
         shape.removegl(this.modelGroup);
         delete this.shapes[shape.shapePosition];
         // clear off back of model array
-        while (
-            this.shapes.length > 0 &&
-            typeof this.shapes[this.shapes.length - 1] === "undefined"
-        )
+        while (this.shapes.length > 0
+            && typeof (this.shapes[this.shapes.length - 1]) === "undefined")
             this.shapes.pop();
         return this;
-    }
+    };
 
     /**
      * Remove all shape objects from viewer
@@ -3013,26 +2770,19 @@ export class GLViewer {
         }
         this.shapes.splice(0, this.shapes.length);
         return this;
-    }
+    };
 
     //gets the center of the selection
     private getSelectionCenter(spec: AtomSelectionSpec): XYZ {
-        if (
-            spec.hasOwnProperty("x") &&
-            spec.hasOwnProperty("y") &&
-            spec.hasOwnProperty("z")
-        )
+        if (spec.hasOwnProperty("x") && spec.hasOwnProperty("y") && spec.hasOwnProperty("z"))
             return spec as XYZ;
         var atoms = this.getAtomsFromSel(spec);
-        if (atoms.length == 0) return { x: 0, y: 0, z: 0 };
+        if (atoms.length == 0)
+            return { x: 0, y: 0, z: 0 };
 
         var extent = getExtent(atoms);
-        return {
-            x: extent[0][0] + (extent[1][0] - extent[0][0]) / 2,
-            y: extent[0][1] + (extent[1][1] - extent[0][1]) / 2,
-            z: extent[0][2] + (extent[1][2] - extent[0][2]) / 2,
-        };
-    }
+        return { x: extent[0][0] + (extent[1][0] - extent[0][0]) / 2, y: extent[0][1] + (extent[1][1] - extent[0][1]) / 2, z: extent[0][2] + (extent[1][2] - extent[0][2]) / 2 };
+    };
 
     /**
      * Create and add sphere shape. This method provides a shorthand
@@ -3057,7 +2807,7 @@ export class GLViewer {
         this.shapes.push(s);
         s.finalize(); //finalize shape for memory efficiency, assume shape won't be extended
         return s;
-    }
+    };
 
     /**
      * Create and add box shape. This method provides a shorthand
@@ -3077,6 +2827,7 @@ export class GLViewer {
      viewer.render();
      */
     public addBox(spec: BoxSpec = {}) {
+
         if (spec.corner != undefined) {
             spec.corner = this.getSelectionCenter(spec.corner);
         }
@@ -3091,7 +2842,7 @@ export class GLViewer {
         s.finalize(); //finalize shape for memory efficiency, assume shape won't be extended
 
         return s;
-    }
+    };
 
     /**
      * Create and add arrow shape
@@ -3118,6 +2869,7 @@ export class GLViewer {
             });
      */
     public addArrow(spec: ArrowSpec = {}) {
+
         spec.start = this.getSelectionCenter(spec.start);
         spec.end = this.getSelectionCenter(spec.end);
 
@@ -3128,7 +2880,7 @@ export class GLViewer {
         s.finalize(); //finalize shape for memory efficiency, assume shape won't be extended
 
         return s;
-    }
+    };
 
     /**
      * Create and add cylinder shape
@@ -3165,18 +2917,21 @@ export class GLViewer {
           viewer.render();
      */
     public addCylinder(spec: CylinderSpec = {}) {
+
         spec.start = this.getSelectionCenter(spec.start);
         spec.end = this.getSelectionCenter(spec.end);
 
         var s = new GLShape(spec);
         s.shapePosition = this.shapes.length;
-        if (spec.dashed) s.addDashedCylinder(spec);
-        else s.addCylinder(spec);
+        if (spec.dashed)
+            s.addDashedCylinder(spec);
+        else
+            s.addCylinder(spec);
         this.shapes.push(s);
         s.finalize(); //finalize shape for memory efficiency, assume shape won't be extended
 
         return s;
-    }
+    };
 
     /**
      * Create and add Curve shape
@@ -3209,7 +2964,8 @@ export class GLViewer {
         s.finalize(); //finalize shape for memory efficiency, assume shape won't be extended
 
         return s;
-    }
+    };
+
 
     /**
      * Create and add line shape
@@ -3230,19 +2986,23 @@ export class GLViewer {
 
      */
     public addLine(spec: LineSpec = {}) {
+
         spec.start = this.getSelectionCenter(spec.start);
         spec.end = this.getSelectionCenter(spec.end);
 
         spec.wireframe = true;
         var s = new GLShape(spec);
         s.shapePosition = this.shapes.length;
-        if (spec.dashed) s = this.addLineDashed(spec, s);
-        else s.addLine(spec);
+        if (spec.dashed)
+            s = this.addLineDashed(spec, s);
+        else
+            s.addLine(spec);
         this.shapes.push(s);
         s.finalize(); //finalize shape for memory efficiency, assume shape won't be extended
 
         return s;
-    }
+    };
+
 
     /**
      * Create and add unit cell visualization.
@@ -3260,34 +3020,15 @@ export class GLViewer {
      */
     public addUnitCell(model?: GLModel | number, spec?: UnitCellStyleSpec) {
         model = this.getModel(model);
-        spec = spec || { alabel: "a", blabel: "b", clabel: "c" };
+        spec = spec || { alabel: 'a', blabel: 'b', clabel: 'c' };
 
         spec.box = spec.box || {};
-        spec.astyle = spec.astyle || { color: "red", radius: 0.1, midpos: -1 };
-        spec.bstyle = spec.bstyle || {
-            color: "green",
-            radius: 0.1,
-            midpos: -1,
-        };
-        spec.cstyle = spec.cstyle || { color: "blue", radius: 0.1, midpos: -1 };
-        spec.alabelstyle = spec.alabelstyle || {
-            fontColor: "red",
-            showBackground: false,
-            alignment: "center",
-            inFront: false,
-        };
-        spec.blabelstyle = spec.blabelstyle || {
-            fontColor: "green",
-            showBackground: false,
-            alignment: "center",
-            inFront: false,
-        };
-        spec.clabelstyle = spec.clabelstyle || {
-            fontColor: "blue",
-            showBackground: false,
-            alignment: "center",
-            inFront: false,
-        };
+        spec.astyle = spec.astyle || { color: 'red', radius: 0.1, midpos: -1 };
+        spec.bstyle = spec.bstyle || { color: 'green', radius: 0.1, midpos: -1 };
+        spec.cstyle = spec.cstyle || { color: 'blue', radius: 0.1, midpos: -1 };
+        spec.alabelstyle = spec.alabelstyle || { fontColor: 'red', showBackground: false, alignment: 'center', inFront: false };
+        spec.blabelstyle = spec.blabelstyle || { fontColor: 'green', showBackground: false, alignment: 'center', inFront: false };
+        spec.clabelstyle = spec.clabelstyle || { fontColor: 'blue', showBackground: false, alignment: 'center', inFront: false };
 
         //clear any previous box
         if (model.unitCellObjects) {
@@ -3298,56 +3039,39 @@ export class GLViewer {
         var data = model.getCrystData();
         var matrix = null;
         if (data) {
+
             if (data.matrix) {
                 matrix = data.matrix;
             } else {
-                var a = data.a,
-                    b = data.b,
-                    c = data.c,
-                    alpha = data.alpha,
-                    beta = data.beta,
-                    gamma = data.gamma;
-                alpha = (alpha * Math.PI) / 180.0;
-                beta = (beta * Math.PI) / 180.0;
-                gamma = (gamma * Math.PI) / 180.0;
+                var a = data.a, b = data.b, c = data.c, alpha = data.alpha, beta = data.beta, gamma = data.gamma;
+                alpha = alpha * Math.PI / 180.0;
+                beta = beta * Math.PI / 180.0;
+                gamma = gamma * Math.PI / 180.0;
 
                 var u, v, w;
 
                 u = Math.cos(beta);
-                v =
-                    (Math.cos(alpha) - Math.cos(beta) * Math.cos(gamma)) /
-                    Math.sin(gamma);
+                v = (Math.cos(alpha) - Math.cos(beta) * Math.cos(gamma)) / Math.sin(gamma);
                 w = Math.sqrt(Math.max(0, 1 - u * u - v * v));
 
-                matrix = new Matrix3(
-                    a,
-                    b * Math.cos(gamma),
-                    c * u,
-                    0,
-                    b * Math.sin(gamma),
-                    c * v,
-                    0,
-                    0,
-                    c * w
-                );
+                matrix = new Matrix3(a, b * Math.cos(gamma), c * u,
+                    0, b * Math.sin(gamma), c * v,
+                    0, 0, c * w);
             }
 
-            var points = [
-                new Vector3(0, 0, 0),
-                new Vector3(1, 0, 0),
-                new Vector3(0, 1, 0),
-                new Vector3(0, 0, 1),
-                new Vector3(1, 1, 0),
-                new Vector3(0, 1, 1),
-                new Vector3(1, 0, 1),
-                new Vector3(1, 1, 1),
-            ];
+            var points = [new Vector3(0, 0, 0),
+            new Vector3(1, 0, 0),
+            new Vector3(0, 1, 0),
+            new Vector3(0, 0, 1),
+            new Vector3(1, 1, 0),
+            new Vector3(0, 1, 1),
+            new Vector3(1, 0, 1),
+            new Vector3(1, 1, 1)];
 
             // console.log('Matrix4', data.matrix4, data.matrix);
             if (data.matrix4) {
                 for (let i = 0; i < points.length; i++) {
-                    if (data.size)
-                        points[i].multiplyVectors(points[i], data.size); //matrix is for unit vectors, not whole box
+                    if (data.size) points[i].multiplyVectors(points[i], data.size); //matrix is for unit vectors, not whole box
                     points[i] = points[i].applyMatrix4(data.matrix4);
                 }
             } else {
@@ -3409,6 +3133,7 @@ export class GLViewer {
                 spec.alabelstyle.position = points[1];
                 let label = this.addLabel(spec.alabel, spec.alabelstyle);
                 model.unitCellObjects.labels.push(label);
+
             }
             if (spec.blabel) {
                 spec.blabelstyle.position = points[2];
@@ -3420,8 +3145,10 @@ export class GLViewer {
                 let label = this.addLabel(spec.clabel, spec.clabelstyle);
                 model.unitCellObjects.labels.push(label);
             }
+
         }
-    }
+
+    };
 
     /**
     * Remove unit cell visualization from model.
@@ -3441,15 +3168,11 @@ export class GLViewer {
         model = this.getModel(model);
         if (model.unitCellObjects) {
             let viewer = this;
-            model.unitCellObjects.shapes.forEach(function (s) {
-                viewer.removeShape(s);
-            });
-            model.unitCellObjects.labels.forEach(function (l) {
-                viewer.removeLabel(l);
-            });
+            model.unitCellObjects.shapes.forEach(function (s) { viewer.removeShape(s); });
+            model.unitCellObjects.labels.forEach(function (l) { viewer.removeLabel(l); });
         }
         delete model.unitCellObjects;
-    }
+    };
 
     /**
     * Replicate atoms in model to form a super cell of the specified dimensions.
@@ -3471,14 +3194,7 @@ export class GLViewer {
              viewer.render();
        });
     */
-    public replicateUnitCell(
-        A: number = 3,
-        B: number = A,
-        C: number = B,
-        model?: GLModel | number,
-        addBonds?: boolean,
-        prune?
-    ) {
+    public replicateUnitCell(A: number = 3, B: number = A, C: number = B, model?: GLModel | number, addBonds?: boolean, prune?) {
         model = this.getModel(model);
         let cryst = model.getCrystData();
         if (cryst) {
@@ -3495,38 +3211,28 @@ export class GLViewer {
                 A = B = C = 3;
             }
 
-            let omitPosition = function (x, y, z) {
-                return false;
-            };
+            let omitPosition = function (x, y, z) { return false; };
             if (prune) {
                 const invmatrix = new Matrix3().getInverse3(matrix);
                 omitPosition = function (x, y, z) {
                     //must reside within unit cell
                     let pos = new Vector3(x, y, z).applyMatrix3(invmatrix);
-                    if (
-                        pos.x > -0.0001 &&
-                        pos.x < 1.0001 &&
-                        pos.y > -0.0001 &&
-                        pos.y < 1.0001 &&
-                        pos.z > -0.0001 &&
-                        pos.z < 1.0001
-                    ) {
+                    if (pos.x > -0.0001 && pos.x < 1.0001 &&
+                        pos.y > -0.0001 && pos.y < 1.0001 &&
+                        pos.z > -0.0001 && pos.z < 1.0001) {
                         return false;
                     } else {
                         return true;
                     }
-                };
+                }
+
             }
 
             for (let i = 0; i < A; i++) {
                 for (let j = 0; j < B; j++) {
                     for (let k = 0; k < C; k++) {
                         if (i == 0 && j == 0 && k == 0) continue; //actual unit cell
-                        let offset = new Vector3(
-                            makeoff(i),
-                            makeoff(j),
-                            makeoff(k)
-                        );
+                        let offset = new Vector3(makeoff(i), makeoff(j), makeoff(k));
                         offset.applyMatrix3(matrix);
 
                         let newatoms = [];
@@ -3555,7 +3261,7 @@ export class GLViewer {
                 model.assignBonds();
             }
         }
-    }
+    };
 
     /** Add dashed line to shape */
     public addLineDashed(spec: CylinderSpec, s: GLShape) {
@@ -3566,11 +3272,8 @@ export class GLViewer {
         if (!spec.start) {
             p1 = new Vector3(0, 0, 0);
         } else {
-            p1 = new Vector3(
-                spec.start.x || 0,
-                spec.start.y || 0,
-                spec.start.z || 0
-            );
+            p1 = new Vector3(spec.start.x || 0,
+                spec.start.y || 0, spec.start.z || 0);
         }
 
         var p2: Vector3;
@@ -3595,7 +3298,7 @@ export class GLViewer {
         gapAmt = gap.length();
 
         while (drawn < length) {
-            if (drawn + dashAmt > length) {
+            if ((drawn + dashAmt) > length) {
                 spec.start = p1;
                 spec.end = p2;
                 s.addLine(spec);
@@ -3658,7 +3361,7 @@ export class GLViewer {
         s.finalize(); //finalize shape for memory efficiency, assume shape won't be extended
 
         return s;
-    }
+    };
 
     /**
      * Construct isosurface from volumetric data in gaussian cube format
@@ -3680,22 +3383,15 @@ export class GLViewer {
 
 
      */
-    public addVolumetricData(
-        data,
-        format: string,
-        spec: VolumetricRendererSpec | IsoSurfaceSpec = {}
-    ) {
+    public addVolumetricData(data, format: string, spec: VolumetricRendererSpec | IsoSurfaceSpec = {}) {
+
         var voldata = new VolumeData(data, format);
-        if (spec.hasOwnProperty("transferfn")) {
-            //volumetric rendering
-            return this.addVolumetricRender(
-                voldata,
-                spec as VolumetricRendererSpec
-            );
+        if (spec.hasOwnProperty('transferfn')) { //volumetric rendering
+            return this.addVolumetricRender(voldata, spec as VolumetricRendererSpec);
         } else {
             return this.addIsosurface(voldata, spec as IsoSurfaceSpec);
         }
-    }
+    };
 
     /**
      * Construct isosurface from volumetric data.  This is more flexible
@@ -3721,7 +3417,7 @@ export class GLViewer {
         s.addIsosurface(data, spec, callback, this);
         this.shapes.push(s);
         return s;
-    }
+    };
 
     /**
      * Create volumetric renderer for volumetricData
@@ -3737,7 +3433,7 @@ export class GLViewer {
         s.shapePosition = this.shapes.length;
         this.shapes.push(s);
         return s;
-    }
+    };
 
     /**
      * Return true if volumetric rendering is supported (WebGL 2.0 required)
@@ -3746,7 +3442,7 @@ export class GLViewer {
      */
     public hasVolumetricRender() {
         return this.renderer.supportsVolumetric();
-    }
+    };
 
     /**
      * Enable/disable fog for content far from the camera
@@ -3762,21 +3458,22 @@ export class GLViewer {
               viewer.render();
     });
      */
-    public enableFog(fog: boolean | FogSpec) {
+    public enableFog(fog: boolean|FogSpec) {
         if (fog) {
             this.scene.fog = new Fog(this.bgColor, 100, 200);
             this.config.disableFog = false;
 
             const f = fog as FogSpec;
-            if (f.fogStart == undefined) this.fogStart = 0.4;
+            if(f.fogStart == undefined) this.fogStart = 0.4;
             else this.fogStart = f.fogStart;
-            if (f.fogEnd == undefined) this.fogEnd = 1.0;
-            else this.fogEnd = f.fogEnd;
+            if(f.fogEnd == undefined) this.fogEnd = 1.0;
+            else this.fogEnd = f.fogEnd; 
+
         } else {
             this.config.disableFog = true;
             this.show();
         }
-    }
+    };
 
     /**
      * Sets the atomlists of all models in the viewer to specified frame.
@@ -3793,11 +3490,10 @@ export class GLViewer {
             var modelMap = viewer.models.map(function (model) {
                 return model.setFrame(framenum);
             });
-            Promise.all(modelMap).then(function () {
-                resolve();
-            });
+            Promise.all(modelMap)
+                .then(function () { resolve(); });
         });
-    }
+    };
 
     /**
      * Gets the current viewer frame.
@@ -3805,7 +3501,7 @@ export class GLViewer {
      */
     public getFrame() {
         return this.viewer_frame;
-    }
+    };
 
     /**
      * Returns the number of frames that the model with the most frames in the viewer has
@@ -3830,11 +3526,12 @@ export class GLViewer {
             }
         }
         return mostFrames;
-    }
+    };
 
     public getNextModelId() {
         return this.models.length;
     }
+
 
     /**
      * Animate all models in viewer from their respective frames
@@ -3876,22 +3573,26 @@ export class GLViewer {
         var display = function (direction) {
             time = new Date();
             if (direction == "forward") {
-                self.setFrame(currFrame).then(function () {
-                    currFrame = (currFrame + inc) % mostFrames;
-                    resolve();
-                });
-            } else if (direction == "backward") {
-                self.setFrame(mostFrames - 1 - currFrame).then(function () {
-                    currFrame = (currFrame + inc) % mostFrames;
-                    resolve();
-                });
-            } else {
-                //back and forth
-                self.setFrame(currFrame).then(function () {
-                    currFrame += inc;
-                    inc *= currFrame % (mostFrames - 1) == 0 ? -1 : 1;
-                    resolve();
-                });
+                self.setFrame(currFrame)
+                    .then(function () {
+                        currFrame = (currFrame + inc) % mostFrames;
+                        resolve();
+                    });
+            }
+            else if (direction == "backward") {
+                self.setFrame((mostFrames - 1) - currFrame)
+                    .then(function () {
+                        currFrame = (currFrame + inc) % mostFrames;
+                        resolve();
+                    });
+            }
+            else { //back and forth
+                self.setFrame(currFrame)
+                    .then(function () {
+                        currFrame += inc;
+                        inc *= (((currFrame % (mostFrames - 1)) == 0) ? -1 : 1);
+                        resolve();
+                    });
             }
         };
 
@@ -3900,14 +3601,15 @@ export class GLViewer {
             if (!self.getCanvas().isConnected) {
                 //we no longer exist as part of the DOM
                 self.stopAnimate();
-            } else if (++displayCount >= displayMax || !self.isAnimated()) {
+            }
+            else if (++displayCount >= displayMax || !self.isAnimated()) {
                 timer.cancel();
                 self.animationTimers.delete(timer);
                 self.decAnim();
-            } else {
-                var newInterval =
-                    interval - (new Date().getTime() - time.getTime());
-                newInterval = newInterval > 0 ? newInterval : 0;
+            }
+            else {
+                var newInterval = interval - (new Date().getTime() - time.getTime());
+                newInterval = (newInterval > 0) ? newInterval : 0;
                 self.animationTimers.delete(timer);
                 timer = new PausableTimer(display, newInterval, loop);
                 self.animationTimers.add(timer);
@@ -3917,39 +3619,34 @@ export class GLViewer {
         timer = new PausableTimer(display, 0, loop);
         this.animationTimers.add(timer);
         return this;
-    }
+    };
 
     /**
      * Stop animation of all models in viewer
      */
     public stopAnimate() {
         this.animated = 0;
-        this.animationTimers.forEach(function (timer: PausableTimer) {
-            timer.cancel();
-        });
+        this.animationTimers.forEach(function (timer: PausableTimer) { timer.cancel(); });
         this.animationTimers = new Set();
         return this;
-    }
+    };
 
     /**
      * Pause animation of all models in viewer
      */
     public pauseAnimate() {
-        this.animationTimers.forEach(function (timer) {
-            timer.pause();
-        });
+        this.animationTimers.forEach(function (timer) { timer.pause(); });
         return this;
-    }
+    };
 
     /**
      * Resume animation of all models in viewer
      */
     public resumeAnimate() {
-        this.animationTimers.forEach(function (timer) {
-            timer.resume();
-        });
+        this.animationTimers.forEach(function (timer) { timer.resume(); });
         return this;
-    }
+    };
+
 
     /**
      * Return true if viewer is currently being animated, false otherwise
@@ -3957,19 +3654,16 @@ export class GLViewer {
      */
     public isAnimated() {
         return this.animated > 0;
-    }
+    };
+
 
     //setup options dict
     private getModelOpt(options) {
         if (options && !options.defaultcolors) {
             options.defaultcolors = this.defaultcolors;
-            options.cartoonQuality =
-                options.cartoonQuality || this.config.cartoonQuality;
-        } else if (typeof options === "undefined") {
-            options = {
-                defaultcolors: this.defaultcolors,
-                cartoonQuality: this.config.cartoonQuality,
-            };
+            options.cartoonQuality = options.cartoonQuality || this.config.cartoonQuality;
+        } else if (typeof (options) === 'undefined') {
+            options = { defaultcolors: this.defaultcolors, cartoonQuality: this.config.cartoonQuality };
         }
         return options;
     }
@@ -4003,7 +3697,7 @@ export class GLViewer {
         this.models.push(m);
 
         return m;
-    }
+    };
 
     /**
      * Given multimodel file and its format, add atom data to the viewer as separate models
@@ -4032,7 +3726,7 @@ export class GLViewer {
         }
 
         return this.models;
-    }
+    };
 
     /**
      * Create and add model to viewer. Given multimodel file and its format,
@@ -4061,7 +3755,7 @@ export class GLViewer {
         this.models.push(m);
 
         return m;
-    }
+    };
 
     /**
      * Create and add model to viewer. Given multimodel file and its format,
@@ -4088,7 +3782,8 @@ export class GLViewer {
         this.models.push(m);
 
         return m;
-    }
+    };
+
 
     /**
      * Delete specified model from viewer
@@ -4097,17 +3792,16 @@ export class GLViewer {
      */
     public removeModel(model?: GLModel | number) {
         model = this.getModel(model);
-        if (!model) return;
+        if (!model)
+            return;
         model.removegl(this.modelGroup);
         delete this.models[model.getID()];
         // clear off back of model array
-        while (
-            this.models.length > 0 &&
-            typeof this.models[this.models.length - 1] === "undefined"
-        )
+        while (this.models.length > 0
+            && typeof (this.models[this.models.length - 1]) === "undefined")
             this.models.pop();
         return this;
-    }
+    };
 
     /**
      * Delete all existing models
@@ -4116,10 +3810,11 @@ export class GLViewer {
         for (var i = 0; i < this.models.length; i++) {
             var model = this.models[i];
             if (model) model.removegl(this.modelGroup);
+
         }
         this.models.splice(0, this.models.length); //don't simply overwrite array in case linked
         return this;
-    }
+    };
 
     /**
      * Export one or all of the loaded models into ChemDoodle compatible JSON.
@@ -4137,7 +3832,7 @@ export class GLViewer {
             object.m = [this.models[modelID].toCDObject()];
         }
         return JSON.stringify(object);
-    }
+    };
 
     /** return a VRML string representation of the scene.  Include VRML header information
      * @param {VRMLExportOptions} [options={}] - Export options.
@@ -4161,7 +3856,7 @@ export class GLViewer {
         this.applyToModels("removegl", this.modelGroup); //cleanup
         this.modelGroup = savedmodelGroup;
         return ret;
-    }
+    };
 
     /**
      * Create a new model from atoms specified by sel.
@@ -4177,22 +3872,16 @@ export class GLViewer {
             if (this.models[i]) {
                 var atoms = this.models[i].selectedAtoms(sel);
                 m.addAtoms(atoms);
-                if (extract) this.models[i].removeAtoms(atoms);
+                if (extract)
+                    this.models[i].removeAtoms(atoms);
             }
         }
         this.models.push(m);
         return m;
-    }
+    };
 
-    private applyToModels(
-        func: string,
-        sel: any,
-        value1?,
-        value2?,
-        value3?,
-        value4?,
-        value5?
-    ) {
+    private applyToModels(func: string, sel: any, value1?, value2?, value3?, value4?, value5?) {
+
         //apply func to all models that are selected by sel with value1 and 2
         //sel might not be a selection, in which case getModelList returns everything
         var ms = this.getModelList(sel);
@@ -4224,7 +3913,7 @@ export class GLViewer {
     public setStyle(sel: AtomSelectionSpec, style: AtomStyleSpec);
     public setStyle(sel: AtomStyleSpec);
     public setStyle(sel: unknown, style?: unknown) {
-        if (typeof style === "undefined") {
+        if (typeof (style) === 'undefined') {
             //if a single argument is provided, assume it is a style and select all
             style = sel as AtomStyleSpec;
             sel = {};
@@ -4232,7 +3921,7 @@ export class GLViewer {
 
         this.applyToModels("setStyle", sel, style, false);
         return this;
-    }
+    };
 
     /**
      * Add style properties to all selected atoms
@@ -4252,14 +3941,15 @@ export class GLViewer {
     public addStyle(sel: AtomSelectionSpec, style: AtomStyleSpec);
     public addStyle(sel: AtomStyleSpec);
     public addStyle(sel: unknown, style?: unknown) {
-        if (typeof style === "undefined") {
+        if (typeof (style) === 'undefined') {
             //if a single argument is provided, assume it is a style and select all
             style = sel;
             sel = {};
         }
         this.applyToModels("setStyle", sel, style, true);
         return this;
-    }
+    };
+
 
     /**
      * Set click-handling properties to all selected atoms. *Important*: render must be called for this to take effect.
@@ -4283,7 +3973,7 @@ export class GLViewer {
     public setClickable(sel: AtomSelectionSpec, clickable: boolean, callback) {
         this.applyToModels("setClickable", sel, clickable, callback);
         return this;
-    }
+    };
     /** Set hoverable and callback of selected atoms
      *
      * @param {AtomSelectionSpec} sel - atom selection to apply hoverable settings to
@@ -4310,21 +4000,10 @@ export class GLViewer {
     });
 
      */
-    public setHoverable(
-        sel: AtomSelectionSpec,
-        hoverable: boolean,
-        hover_callback,
-        unhover_callback
-    ) {
-        this.applyToModels(
-            "setHoverable",
-            sel,
-            hoverable,
-            hover_callback,
-            unhover_callback
-        );
+    public setHoverable(sel: AtomSelectionSpec, hoverable: boolean, hover_callback, unhover_callback) {
+        this.applyToModels("setHoverable", sel, hoverable, hover_callback, unhover_callback);
         return this;
-    }
+    };
 
     /** enable context menu and callback of selected atoms
      *
@@ -4332,13 +4011,10 @@ export class GLViewer {
      * @param {boolean} contextMenuEnabled - whether contextMenu-handling is enabled for the selection
 
      */
-    public enableContextMenu(
-        sel: AtomSelectionSpec,
-        contextMenuEnabled: boolean
-    ) {
+    public enableContextMenu(sel: AtomSelectionSpec, contextMenuEnabled: boolean) {
         this.applyToModels("enableContextMenu", sel, contextMenuEnabled);
         return this;
-    }
+    };
 
     /**
      * If  atoms have dx, dy, dz properties (in some xyz files), vibrate populates each model's frame property based on parameters.
@@ -4349,21 +4025,10 @@ export class GLViewer {
      * @param {boolean} bothWays - if true, extend both in positive and negative directions by numFrames
      * @param {ArrowSpec} arrowSpec - specification for drawing animated arrows. If color isn't specified, atom color (sphere, stick, line preference) is used.
      */
-    public vibrate(
-        numFrames: number,
-        amplitude: number,
-        bothways: boolean,
-        arrowSpec: ArrowSpec
-    ) {
-        this.applyToModels(
-            "vibrate",
-            numFrames,
-            amplitude,
-            bothways,
-            arrowSpec
-        );
+    public vibrate(numFrames: number, amplitude: number, bothways: boolean, arrowSpec: ArrowSpec) {
+        this.applyToModels("vibrate", numFrames, amplitude, bothways, arrowSpec);
         return this;
-    }
+    };
 
     /**
      * @param {AtomSelectionSpec} sel
@@ -4371,15 +4036,10 @@ export class GLViewer {
      * @param {Gradient|string} scheme
      * @param {object} range
      */
-    public setColorByProperty(
-        sel: AtomSelectionSpec,
-        prop: string,
-        scheme: Gradient | string,
-        range
-    ) {
+    public setColorByProperty(sel: AtomSelectionSpec, prop: string, scheme: Gradient | string, range) {
         this.applyToModels("setColorByProperty", sel, prop, scheme, range);
         return this;
-    }
+    };
 
     /**
      * @param {AtomSelectionSpec} sel
@@ -4388,7 +4048,7 @@ export class GLViewer {
     public setColorByElement(sel: AtomSelectionSpec, colors) {
         this.applyToModels("setColorByElement", sel, colors);
         return this;
-    }
+    };
 
     /**
      *
@@ -4402,15 +4062,19 @@ export class GLViewer {
 
         for (let i = 0; i < atomlist.length; i++) {
             var atom = atomlist[i];
-            if (typeof atom == "undefined") continue;
+            if (typeof (atom) == "undefined")
+                continue;
 
-            if (atom.x < extent[0][0] || atom.x > extent[1][0]) continue;
-            if (atom.y < extent[0][1] || atom.y > extent[1][1]) continue;
-            if (atom.z < extent[0][2] || atom.z > extent[1][2]) continue;
+            if (atom.x < extent[0][0] || atom.x > extent[1][0])
+                continue;
+            if (atom.y < extent[0][1] || atom.y > extent[1][1])
+                continue;
+            if (atom.z < extent[0][2] || atom.z > extent[1][2])
+                continue;
             ret.push(atom);
         }
         return ret;
-    }
+    };
 
     // return volume of extent
     private static volume(extent) {
@@ -4418,7 +4082,7 @@ export class GLViewer {
         var h = extent[1][1] - extent[0][1];
         var d = extent[1][2] - extent[0][2];
         return w * h * d;
-    } // volume
+    }; // volume
     /*
      * Break up bounding box/atoms into smaller pieces so we can parallelize
      * with webworkers and also limit the size of the working memory Returns
@@ -4433,11 +4097,7 @@ export class GLViewer {
      * @param {AtomSpec[]} atomstoshow
      * @return {Array}
      */
-    private carveUpExtent(
-        extent,
-        atomlist: AtomSpec[],
-        atomstoshow: AtomSpec[]
-    ) {
+    private carveUpExtent(extent, atomlist: AtomSpec[], atomstoshow: AtomSpec[]) {
         let ret = [];
 
         let index2atomlist = {}; //map from atom.index to position in atomlist
@@ -4484,9 +4144,8 @@ export class GLViewer {
                 // create two halves, splitting at index
                 var a = copyExtent(extent);
                 var b = copyExtent(extent);
-                var mid =
-                    (extent[1][index] - extent[0][index]) / 2 +
-                    extent[0][index];
+                var mid = (extent[1][index] - extent[0][index]) / 2
+                    + extent[0][index];
                 a[1][index] = mid;
                 b[0][index] = mid;
 
@@ -4517,12 +4176,12 @@ export class GLViewer {
             ret.push({
                 extent: splits[i],
                 atoms: atomsToListIndex(atoms),
-                toshow: atomsToListIndex(toshow),
+                toshow: atomsToListIndex(toshow)
             });
         }
 
         return ret;
-    }
+    };
 
     // create a mesh defined from the passed vertices and faces and material
     // Just create a single geometry chunk - broken up whether sync or not
@@ -4535,11 +4194,7 @@ export class GLViewer {
      *            mat
      * @return {Mesh}
      */
-    private static generateSurfaceMesh(
-        atoms: AtomSpec[],
-        VandF,
-        mat: MeshLambertMaterial
-    ) {
+    private static generateSurfaceMesh(atoms: AtomSpec[], VandF, mat: MeshLambertMaterial) {
         var geo = new Geometry(true);
         // Only one group per call to generate surface mesh (addSurface
         // should split up mesh render)
@@ -4550,10 +4205,9 @@ export class GLViewer {
         for (let i = 0, il = atoms.length; i < il; i++) {
             var atom = atoms[i];
             if (atom) {
-                if (typeof atom.surfaceColor != "undefined") {
+                if (typeof (atom.surfaceColor) != "undefined") {
                     colors[i] = atom.surfaceColor;
-                } else if (atom.color)
-                    // map from atom
+                } else if (atom.color) // map from atom
                     colors[i] = CC.color(atom.color);
             }
         }
@@ -4588,8 +4242,8 @@ export class GLViewer {
                 colorArray[offset + 2] = col.b;
                 atomArray[i] = atoms[A];
             }
-        } else if (colors.length > 0) {
-            //have atom colors
+        }
+        else if (colors.length > 0) { //have atom colors
             for (let i = 0, il = v.length; i < il; i++) {
                 let A = v[i].atomid;
                 let offsetA = i * 3;
@@ -4602,7 +4256,7 @@ export class GLViewer {
         }
 
         var faces = VandF.faces;
-        geoGroup.faceidx = faces.length; // *3;
+        geoGroup.faceidx = faces.length;// *3;
         geo.initTypedArrays();
 
         var verts = geoGroup.vertexArray;
@@ -4611,31 +4265,19 @@ export class GLViewer {
 
         // Setup colors, faces, and normals
         for (let i = 0, il = faces.length; i < il; i += 3) {
+
             // var a = faces[i].a, b = faces[i].b, c = faces[i].c;
-            var a = faces[i],
-                b = faces[i + 1],
-                c = faces[i + 2];
-            var offsetA = a * 3,
-                offsetB = b * 3,
-                offsetC = c * 3;
+            var a = faces[i], b = faces[i + 1], c = faces[i + 2];
+            var offsetA = a * 3, offsetB = b * 3, offsetC = c * 3;
 
             // setup Normals
             // todo - calculate normals in parallel code
-            vA = new Vector3(
-                verts[offsetA],
-                verts[offsetA + 1],
-                verts[offsetA + 2]
-            );
-            vB = new Vector3(
-                verts[offsetB],
-                verts[offsetB + 1],
-                verts[offsetB + 2]
-            );
-            vC = new Vector3(
-                verts[offsetC],
-                verts[offsetC + 1],
-                verts[offsetC + 2]
-            );
+            vA = new Vector3(verts[offsetA], verts[offsetA + 1],
+                verts[offsetA + 2]);
+            vB = new Vector3(verts[offsetB], verts[offsetB + 1],
+                verts[offsetB + 2]);
+            vC = new Vector3(verts[offsetC], verts[offsetC + 1],
+                verts[offsetC + 2]);
 
             vC.subVectors(vC, vB);
             vA.subVectors(vA, vB);
@@ -4654,11 +4296,12 @@ export class GLViewer {
             normalArray[offsetA + 2] += norm.z;
             normalArray[offsetB + 2] += norm.z;
             normalArray[offsetC + 2] += norm.z;
+
         }
         geoGroup.faceArray = new Uint16Array(faces);
         var mesh = new Mesh(geo, mat as Material);
         return mesh;
-    }
+    };
 
     // do same thing as worker in main thread
     /**
@@ -4676,17 +4319,11 @@ export class GLViewer {
      *            vol
      * @return {Object}
      */
-    private static generateMeshSyncHelper(
-        type: SurfaceType,
-        expandedExtent,
-        extendedAtoms: AtomSpec[],
-        atomsToShow: AtomSpec[],
-        atoms: AtomSpec[],
-        vol: number
-    ) {
+    private static generateMeshSyncHelper(type: SurfaceType, expandedExtent,
+        extendedAtoms: AtomSpec[], atomsToShow: AtomSpec[], atoms: AtomSpec[], vol: number) {
         //            var time = new Date();
         var ps = new ProteinSurface();
-        ps.initparm(expandedExtent, type === 1 ? false : true, vol);
+        ps.initparm(expandedExtent, (type === 1) ? false : true, vol);
 
         //            var time2 = new Date();
         //console.log("initialize " + (time2 - time) + "ms");
@@ -4713,7 +4350,7 @@ export class GLViewer {
         //console.log("marching cube " + (time5 - time4) + "  "+ (time5 - time) + "ms");
 
         return ps.getFacesAndVertices(atomsToShow);
-    }
+    };
 
     /*
      *
@@ -4733,11 +4370,14 @@ export class GLViewer {
         for (var prop in style) {
             if (prop === "color" || prop === "map") {
                 // ignore
-            } else if (style.hasOwnProperty(prop)) mat[prop] = style[prop];
+            } else if (style.hasOwnProperty(prop))
+                mat[prop] = style[prop];
         }
         if (style.opacity !== undefined) {
-            if (style.opacity === 1) mat.transparent = false;
-            else mat.transparent = true;
+            if (style.opacity === 1)
+                mat.transparent = false;
+            else
+                mat.transparent = true;
         }
 
         if (style.wireframe !== undefined) {
@@ -4760,12 +4400,12 @@ export class GLViewer {
             geo: mesh.geometry,
             mat: mesh.material,
             done: true,
-            finished: false, //the rendered finishes surfaces when they are done
+            finished: false //the rendered finishes surfaces when they are done
         };
         var surfid = this.nextSurfID();
         this.surfaces[surfid] = new Surface([surfobj]);
         return surfid;
-    }
+    };
 
     //return a shallow copy of list l, e.g., for atoms so we can
     //ignore superficial changes (ie surfacecolor, position) that happen
@@ -4777,7 +4417,9 @@ export class GLViewer {
             ret[i] = extend({}, l[i]);
         }
         return ret;
-    }
+    };
+
+
 
     /**
      * Add surface representation to atoms
@@ -4789,14 +4431,8 @@ export class GLViewer {
      * @param {function} surfacecallback - function to be called after setting the surface
      * @return {Promise} promise - Returns a promise that ultimately resovles to the surfid.  Returns surfid immediately if surfacecallback is specified.  Returned promise has a [surfid, GLViewer, style, atomsel, allsel, focus] fields for immediate access.
      */
-    public addSurface(
-        stype: SurfaceType | string,
-        style: SurfaceStyleSpec = {},
-        atomsel: AtomSelectionSpec = {},
-        allsel?: AtomSelectionSpec,
-        focus?: AtomSelectionSpec,
-        surfacecallback?
-    ) {
+    public addSurface(stype: SurfaceType | string, style: SurfaceStyleSpec = {}, atomsel: AtomSelectionSpec = {},
+        allsel?: AtomSelectionSpec, focus?: AtomSelectionSpec, surfacecallback?) {
         // type 1: VDW 3: SAS 4: MS 2: SES
         // if sync is true, does all work in main thread, otherwise uses
         // workers
@@ -4825,14 +4461,14 @@ export class GLViewer {
         }
 
         // atoms specified by this selection
-        var atomlist = null,
-            focusSele = null;
+        var atomlist = null, focusSele = null;
         //TODO: currently generating a shallow copy to avoid problems when atoms are chagned
         //during surface generation - come up with a better solution
         var atomsToShow = GLViewer.shallowCopy(this.getAtomsFromSel(atomsel));
         if (!allsel) {
             atomlist = atomsToShow;
-        } else {
+        }
+        else {
             atomlist = GLViewer.shallowCopy(this.getAtomsFromSel(allsel));
         }
 
@@ -4842,21 +4478,14 @@ export class GLViewer {
         for (n = 0; n < this.models.length; n++) {
             if (this.models[n]) {
                 var symMatrices = this.models[n].getSymmetries();
-                if (
-                    symMatrices.length > 1 ||
-                    (symMatrices.length == 1 && !symMatrices[0].isIdentity())
-                ) {
+                if (symMatrices.length > 1 || (symMatrices.length == 1 && !(symMatrices[0].isIdentity()))) {
                     symmetries = true;
                     break;
                 }
             }
         }
 
-        var addSurfaceHelper = function addSurfaceHelper(
-            surfobj: SurfObj,
-            atomlist: AtomSpec[],
-            atomsToShow: AtomSpec[]
-        ) {
+        var addSurfaceHelper = function addSurfaceHelper(surfobj: SurfObj, atomlist: AtomSpec[], atomsToShow: AtomSpec[]) {
             //function returns promise with surfid resolved
             if (!focus) {
                 focusSele = atomsToShow;
@@ -4870,14 +4499,13 @@ export class GLViewer {
             if (style.map && style.map.prop) {
                 // map color space using already set atom properties
                 var prop = style.map.prop;
-                let scheme = getGradient(
-                    style.map.scheme || style.map.gradient || new Gradient.RWB()
-                );
+                let scheme = getGradient(style.map.scheme || style.map.gradient || new Gradient.RWB());
                 let range = scheme.range();
                 if (!range) {
                     range = getPropertyRange(atomsToShow, prop);
                 }
                 style.colorscheme = { prop: prop as string, gradient: scheme };
+
             }
 
             //cache surface color on each atom
@@ -4900,11 +4528,11 @@ export class GLViewer {
                         var x = e[1][0] - e[0][0];
                         var y = e[1][1] - e[0][1];
                         var z = e[1][2] - e[0][2];
-                        var dx = x - sele[2][0];
+                        var dx = (x - sele[2][0]);
                         dx *= dx;
-                        var dy = y - sele[2][1];
+                        var dy = (y - sele[2][1]);
                         dy *= dy;
-                        var dz = z - sele[2][2];
+                        var dz = (z - sele[2][2]);
                         dz *= dz;
 
                         return dx + dy + dz;
@@ -4925,50 +4553,34 @@ export class GLViewer {
                     y: atom.y,
                     z: atom.z,
                     serial: i,
-                    elem: atom.elem,
+                    elem: atom.elem
                 };
             }
 
-            var sync = !!syncSurface;
-            if (
-                typeof $3Dmol == "undefined" ||
-                typeof $3Dmol.SurfaceWorker == "undefined"
-            ) {
+            var sync = !!(syncSurface);
+            if (typeof $3Dmol == "undefined" || typeof $3Dmol.SurfaceWorker == "undefined") {
                 console.log(
-                    "$3Dmol.SurfaceWorker is not defined, using synchronous surface generation."
+                    "$3Dmol.SurfaceWorker is not defined, using synchronous surface generation.",
                 );
                 sync = true;
             }
 
-            if (sync) {
-                // don't use worker, still break up for memory purposes
+            if (sync) { // don't use worker, still break up for memory purposes
 
                 // to keep the browser from locking up, call through setTimeout
                 var callSyncHelper = function callSyncHelper(i) {
                     return new Promise<void>(function (resolve) {
-                        var VandF = GLViewer.generateMeshSyncHelper(
-                            type as SurfaceType,
-                            extents[i].extent,
-                            extents[i].atoms,
-                            extents[i].toshow,
-                            reducedAtoms,
-                            totalVol
-                        );
+                        var VandF = GLViewer.generateMeshSyncHelper(type as SurfaceType, extents[i].extent,
+                            extents[i].atoms, extents[i].toshow, reducedAtoms,
+                            totalVol);
                         //complicated surfaces sometimes have > 2^16 vertices
-                        var VandFs = splitMesh({
-                            vertexArr: VandF.vertices,
-                            faceArr: VandF.faces,
-                        });
+                        var VandFs = splitMesh({ vertexArr: VandF.vertices, faceArr: VandF.faces });
                         for (var vi = 0, vl = VandFs.length; vi < vl; vi++) {
                             VandF = {
                                 vertices: VandFs[vi].vertexArr,
-                                faces: VandFs[vi].faceArr,
+                                faces: VandFs[vi].faceArr
                             };
-                            var mesh = GLViewer.generateSurfaceMesh(
-                                atomlist,
-                                VandF,
-                                mat
-                            );
+                            var mesh = GLViewer.generateSurfaceMesh(atomlist, VandF, mat);
                             mergeGeos(surfobj.geo, mesh);
                         }
                         self.render();
@@ -4979,26 +4591,27 @@ export class GLViewer {
                 for (let i = 0; i < extents.length; i++) {
                     promises.push(callSyncHelper(i));
                 }
-                return Promise.all(promises).then(function () {
-                    surfobj.done = true;
-                    self.render(); // for consistency with parallel case, call render when done
-                    return Promise.resolve(surfid);
-                });
+                return Promise.all(promises)
+                    .then(function () {
+                        surfobj.done = true;
+                        self.render(); // for consistency with parallel case, call render when done
+                        return Promise.resolve(surfid);
+                    });
 
                 // TODO: Asynchronously generate geometryGroups (not separate
                 // meshes) and merge them into a single geometry
-            } else {
-                // use worker
+            } else { // use worker
 
                 var workers = [];
-                if (type < 0) type = 0; // negative reserved for atom data
+                if (type < 0)
+                    type = 0; // negative reserved for atom data
                 for (let i = 0, il = GLViewer.numWorkers; i < il; i++) {
                     var w = new Worker($3Dmol.SurfaceWorker);
                     workers.push(w);
                     w.postMessage({
-                        type: -1,
-                        atoms: reducedAtoms,
-                        volume: totalVol,
+                        'type': -1,
+                        'atoms': reducedAtoms,
+                        'volume': totalVol
                     });
                 }
 
@@ -5017,18 +4630,14 @@ export class GLViewer {
                     var rfunction = function (event) {
                         var VandFs = splitMesh({
                             vertexArr: event.data.vertices,
-                            faceArr: event.data.faces,
+                            faceArr: event.data.faces
                         });
                         for (var i = 0, vl = VandFs.length; i < vl; i++) {
                             var VandF = {
                                 vertices: VandFs[i].vertexArr,
-                                faces: VandFs[i].faceArr,
+                                faces: VandFs[i].faceArr
                             };
-                            var mesh = GLViewer.generateSurfaceMesh(
-                                atomlist,
-                                VandF,
-                                mat
-                            );
+                            var mesh = GLViewer.generateSurfaceMesh(atomlist, VandF, mat);
                             mergeGeos(surfobj.geo, mesh);
                         }
                         self.render();
@@ -5044,14 +4653,7 @@ export class GLViewer {
 
                     var efunction = function (event) {
                         releaseMemory();
-                        console.log(
-                            event.message +
-                                " (" +
-                                event.filename +
-                                ":" +
-                                event.lineno +
-                                ")"
-                        );
+                        console.log(event.message + " (" + event.filename + ":" + event.lineno + ")");
                         reject(event);
                     };
 
@@ -5061,10 +4663,10 @@ export class GLViewer {
                         worker.onerror = efunction;
 
                         worker.postMessage({
-                            type: type,
-                            expandedExtent: extents[i].extent,
-                            extendedAtoms: extents[i].atoms,
-                            atomsToShow: extents[i].toshow,
+                            'type': type,
+                            'expandedExtent': extents[i].extent,
+                            'extendedAtoms': extents[i].atoms,
+                            'atomsToShow': extents[i].toshow
                         });
                     }
                 });
@@ -5080,8 +4682,7 @@ export class GLViewer {
         surf.allsel = allsel;
         surf.focus = focus;
         var promise = null;
-        if (symmetries) {
-            //do preprocessing
+        if (symmetries) { //do preprocessing
             var modelsAtomList = {};
             var modelsAtomsToShow = {};
             for (n = 0; n < this.models.length; n++) {
@@ -5102,45 +4703,37 @@ export class GLViewer {
                         mat: mat,
                         done: false,
                         finished: false,
-                        symmetries: this.models[n].getSymmetries(),
+                        symmetries: this.models[n].getSymmetries()
                         // also webgl initialized
                     });
-                    promises.push(
-                        addSurfaceHelper(
-                            surf[surf.length - 1],
-                            modelsAtomList[n],
-                            modelsAtomsToShow[n]
-                        )
-                    );
+                    promises.push(addSurfaceHelper(surf[surf.length - 1], modelsAtomList[n], modelsAtomsToShow[n]));
                 }
             }
             promise = Promise.all(promises);
-        } else {
+        }
+        else {
             surf.push({
                 geo: new Geometry(true),
                 mat: mat,
                 done: false,
                 finished: false,
-                symmetries: [new Matrix4()],
+                symmetries: [new Matrix4()]
             });
-            promise = addSurfaceHelper(
-                surf[surf.length - 1],
-                atomlist,
-                atomsToShow
-            );
+            promise = addSurfaceHelper(surf[surf.length - 1], atomlist, atomsToShow);
         }
         this.surfaces[surfid] = surf;
         promise.surfid = surfid;
 
-        if (surfacecallback && typeof surfacecallback == "function") {
+        if (surfacecallback && typeof (surfacecallback) == "function") {
             promise.then(function (surfid) {
                 surfacecallback(surfid);
             });
             return surfid;
-        } else {
+        }
+        else {
             return promise;
         }
-    }
+    };
 
     /**
      * Set the surface material to something else, must render change
@@ -5162,7 +4755,7 @@ export class GLViewer {
         if (this.surfaces[surf]) {
             var surfArr = this.surfaces[surf];
             for (let i = 0; i < surfArr.length; i++) {
-                var mat = (surfArr[i].mat = GLViewer.getMatWithStyle(style));
+                var mat = surfArr[i].mat = GLViewer.getMatWithStyle(style);
                 surfArr[i].mat.side = FrontSide;
                 if (style.wireframe) {
                     surfArr[i].geo.setUpWireframe();
@@ -5172,7 +4765,8 @@ export class GLViewer {
                     surfArr[i].geo.colorsNeedUpdate = true;
                     const c = CC.color(style.color);
                     surfArr[i].geo.setColor(c);
-                } else if (mat.voldata && mat.volscheme) {
+                }
+                else if (mat.voldata && mat.volscheme) {
                     //convert volumetric data into colors
                     const scheme = mat.volscheme;
                     const voldata = mat.voldata;
@@ -5199,7 +4793,7 @@ export class GLViewer {
             }
         }
         return this;
-    }
+    };
 
     /**
      * Return surface object
@@ -5207,7 +4801,7 @@ export class GLViewer {
      */
     public getSurface(surf: number) {
         return this.surfaces[surf];
-    }
+    };
 
     /**
      * Remove surface with given ID
@@ -5217,15 +4811,17 @@ export class GLViewer {
         var surfArr = this.surfaces[surf];
         for (var i = 0; i < surfArr.length; i++) {
             if (surfArr[i] && surfArr[i].lastGL) {
-                if (surfArr[i].geo !== undefined) surfArr[i].geo.dispose();
-                if (surfArr[i].mat !== undefined) surfArr[i].mat.dispose();
+                if (surfArr[i].geo !== undefined)
+                    surfArr[i].geo.dispose();
+                if (surfArr[i].mat !== undefined)
+                    surfArr[i].mat.dispose();
                 this.modelGroup.remove(surfArr[i].lastGL); // remove from scene
             }
         }
         delete this.surfaces[surf];
         this.show();
         return this;
-    }
+    };
 
     /** Remove all surfaces.
      **/
@@ -5235,8 +4831,10 @@ export class GLViewer {
             var surfArr = this.surfaces[n];
             for (var i = 0; i < surfArr.length; i++) {
                 if (surfArr[i] && surfArr[i].lastGL) {
-                    if (surfArr[i].geo !== undefined) surfArr[i].geo.dispose();
-                    if (surfArr[i].mat !== undefined) surfArr[i].mat.dispose();
+                    if (surfArr[i].geo !== undefined)
+                        surfArr[i].geo.dispose();
+                    if (surfArr[i].mat !== undefined)
+                        surfArr[i].mat.dispose();
                     this.modelGroup.remove(surfArr[i].lastGL); // remove from scene
                 }
             }
@@ -5244,25 +4842,18 @@ export class GLViewer {
         }
         this.show();
         return this;
-    }
+    };
 
     /** return Jmol moveto command to position this scene */
     public jmolMoveTo() {
         var pos = this.modelGroup.position;
         // center on same position
-        var ret = "center { " + -pos.x + " " + -pos.y + " " + -pos.z + " }; ";
+        var ret = "center { " + (-pos.x) + " " + (-pos.y) + " " + (-pos.z)
+            + " }; ";
         // apply rotation
         var q = this.rotationGroup.quaternion;
-        ret +=
-            "moveto .5 quaternion { " +
-            q.x +
-            " " +
-            q.y +
-            " " +
-            q.z +
-            " " +
-            q.w +
-            " };";
+        ret += "moveto .5 quaternion { " + q.x + " " + q.y + " " + q.z
+            + " " + q.w + " };";
         // zoom is tricky.. maybe i would be best to let callee zoom on
         // selection?
         // can either do a bunch of math, or maybe zoom to the center with a
@@ -5270,7 +4861,7 @@ export class GLViewer {
         // but reasonable percentage
 
         return ret;
-    }
+    };
 
     /** Clear scene of all objects
      * */
@@ -5281,7 +4872,7 @@ export class GLViewer {
         this.removeAllShapes();
         this.show();
         return this;
-    }
+    };
 
     // props is a list of objects that select certain atoms and enumerate
     // properties for those atoms
@@ -5307,12 +4898,13 @@ export class GLViewer {
         sel = sel || {};
         var atoms = this.getAtomsFromSel(sel);
 
-        if (typeof props == "function") {
+        if (typeof (props) == "function") {
             for (let a = 0, numa = atoms.length; a < numa; a++) {
                 let atom = atoms[a];
                 props(atom);
             }
-        } else {
+        }
+        else {
             for (let a = 0, numa = atoms.length; a < numa; a++) {
                 var atom = atoms[a];
                 for (let i = 0, n = props.length; i < n; i++) {
@@ -5322,7 +4914,8 @@ export class GLViewer {
                             if (prop.props.hasOwnProperty(p)) {
                                 // check the atom
                                 if (this.atomIsSelected(atom, prop)) {
-                                    if (!atom.properties) atom.properties = {};
+                                    if (!atom.properties)
+                                        atom.properties = {};
                                     atom.properties[p] = prop.props[p];
                                 }
                             }
@@ -5332,7 +4925,8 @@ export class GLViewer {
             }
         }
         return this;
-    }
+    };
+
 
     /**
      * Synchronize this view matrix of this viewer to the passed viewer.
@@ -5343,7 +4937,7 @@ export class GLViewer {
     public linkViewer(otherviewer: GLViewer) {
         this.linkedViewers.push(otherviewer);
         return this;
-    }
+    };
 
     /**
      * Return the z distance between the model and the camera
@@ -5351,7 +4945,7 @@ export class GLViewer {
      */
     public getPerceivedDistance() {
         return this.CAMERA_Z - this.rotationGroup.position.z;
-    }
+    };
 
     /**
      * Set the distance between the model and the camera
@@ -5359,7 +4953,7 @@ export class GLViewer {
      */
     public setPerceivedDistance(dist: number) {
         this.rotationGroup.position.z = this.CAMERA_Z - dist;
-    }
+    };
 
     /**
      * Used for setting an approx value of eyeSeparation. Created for calling by StereoViewer object
@@ -5368,13 +4962,13 @@ export class GLViewer {
     public setAutoEyeSeparation(isright: boolean, x: number) {
         var dist = this.getPerceivedDistance();
         if (!x) x = 5.0;
-        if (isright || this.camera.position.x > 0)
-            //setting a value of dist*tan(x)
-            this.camera.position.x = dist * Math.tan((Math.PI / 180.0) * x);
-        else this.camera.position.x = -dist * Math.tan((Math.PI / 180.0) * x);
+        if (isright || this.camera.position.x > 0) //setting a value of dist*tan(x)
+            this.camera.position.x = dist * Math.tan(Math.PI / 180.0 * x);
+        else
+            this.camera.position.x = -dist * Math.tan(Math.PI / 180.0 * x);
         this.camera.lookAt(new Vector3(0, 0, this.rotationGroup.position.z));
         return this.camera.position.x;
-    }
+    };
 
     /**
      * Set the default cartoon quality for newly created models.  Default is 5.
@@ -5383,8 +4977,10 @@ export class GLViewer {
      */
     public setDefaultCartoonQuality(val: number) {
         this.config.cartoonQuality = val;
-    }
+    };
+
 }
+
 
 /**
  * Create and initialize an appropriate viewer at supplied HTML element using specification in config
@@ -5410,10 +5006,11 @@ export function createViewer(element, config?: ViewerSpec) {
     try {
         var viewer = new GLViewer(element, config);
         return viewer;
-    } catch (e) {
+    }
+    catch (e) {
         throw "error creating viewer: " + e;
     }
-}
+};
 
 /**
  * Create and initialize an appropriate a grid of viewers that share a WebGL canvas
@@ -5460,22 +5057,17 @@ export function createViewer(element, config?: ViewerSpec) {
    });
 
  */
-export function createViewerGrid(
-    element,
-    config: ViewerGridSpec = {},
-    viewer_config: ViewerSpec = {}
-) {
+export function createViewerGrid(element, config: ViewerGridSpec = {}, viewer_config: ViewerSpec = {}) {
     element = getElement(element);
     if (!element) return;
 
     var viewers = [];
     //create canvas
-    var canvas = document.createElement("canvas");
+    var canvas = document.createElement('canvas');
 
     viewer_config.rows = config.rows;
     viewer_config.cols = config.cols;
-    viewer_config.control_all =
-        config.control_all != undefined ? config.control_all : false;
+    viewer_config.control_all = config.control_all != undefined ? config.control_all : false;
     element.appendChild(canvas);
 
     //try to create the  viewer
@@ -5498,22 +5090,19 @@ export function createViewerGrid(
     }
 
     return viewers;
-}
+};
+
 
 /* StereoViewer for stereoscopic viewing
- * @param {Object | string} element - Either HTML element or string identifier
- *
- */
+* @param {Object | string} element - Either HTML element or string identifier
+*
+*/
 export function createStereoViewer(element) {
     var that = this;
     element = getElement(element);
     if (!element) return;
 
-    var viewers = createViewerGrid(element, {
-        rows: 1,
-        cols: 2,
-        control_all: true,
-    });
+    var viewers = createViewerGrid(element, { rows: 1, cols: 2, control_all: true });
 
     this.glviewer1 = viewers[0][0];
     this.glviewer2 = viewers[0][1];
@@ -5526,39 +5115,28 @@ export function createStereoViewer(element) {
 
     var methods = Object.getOwnPropertyNames(this.glviewer1.__proto__) //get all methods of glviewer object
         .filter(function (property) {
-            return typeof that.glviewer1[property] == "function";
+            return typeof that.glviewer1[property] == 'function';
         });
 
-    for (var i = 0; i < methods.length; i++) {
-        //create methods of the same name
+    for (var i = 0; i < methods.length; i++) { //create methods of the same name
         this[methods[i]] = (function (method) {
             return function () {
-                var m1 = this.glviewer1[method].apply(
-                    this.glviewer1,
-                    arguments
-                );
-                var m2 = this.glviewer2[method].apply(
-                    this.glviewer2,
-                    arguments
-                );
+                var m1 = this.glviewer1[method].apply(this.glviewer1, arguments);
+                var m2 = this.glviewer2[method].apply(this.glviewer2, arguments);
                 return [m1, m2];
             };
         })(methods[i]);
     }
 
     //special cased methods
-    this.setCoordinates = function (models, data, format) {
-        //for setting the coordinates of the models
+    this.setCoordinates = function (models, data, format) { //for setting the coordinates of the models
         for (var i = 0; i < models.length; i++) {
             models[i].setCoordinates(data, format);
         }
     };
 
     this.surfacesFinished = function () {
-        return (
-            this.glviewer1.surfacesFinished() &&
-            this.glviewer2.surfacesFinished()
-        );
+        return this.glviewer1.surfacesFinished() && this.glviewer2.surfacesFinished();
     };
 
     this.isAnimated = function () {
@@ -5576,7 +5154,9 @@ export function createStereoViewer(element) {
     this.getCanvas = function () {
         return this.glviewer1.getCanvas(); //same for both
     };
-}
+
+};
+
 
 /**
  * Outline style configuration parameters
@@ -5677,7 +5257,8 @@ export interface ViewerSpec {
     outline?: OutlineStyle;
     /** Ambient occlusion settings */
     ambientOcclusion?: AmbientOcclusionStyle;
-}
+
+};
 
 /**
  * Grid GLViewer input specification
@@ -5689,7 +5270,8 @@ export interface ViewerGridSpec {
     cols?: number;
     /** if true, mouse events are linked */
     control_all?: boolean;
-}
+};
+
 
 /**
  * @example
@@ -5724,8 +5306,9 @@ export interface SurfaceStyleSpec {
     /** Display as wireframe */
     wireframe?: boolean;
     /* specifies a numeric atom property (prop) and color mapping (scheme) such as {@link $3Dmol.Gradient.RWB}.  Deprecated, use colorscheme instead. */
-    map?: Record<string, unknown>;
-}
+    map?: Record<string, unknown>
+};
+
 
 /** Style specification ofr unit cell shape.  */
 export interface UnitCellStyleSpec {

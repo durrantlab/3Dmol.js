@@ -2,11 +2,12 @@ import { Vector3 } from "./WebGL/math";
 import { Geometry } from "./WebGL";
 import { Color, Colored } from "colors";
 
+
 //define enum values
 /**
  * Enum for cylinder cap styles.
  * @readonly
- * @enum
+ * @enum 
  * @property NONE
  * @property FLAT
  * @property ROUND
@@ -14,8 +15,8 @@ import { Color, Colored } from "colors";
 export enum CAP {
     NONE = 0,
     FLAT = 1,
-    ROUND = 2,
-}
+    ROUND = 2
+};
 
 export interface Point {
     x: number;
@@ -26,9 +27,10 @@ export interface Point {
 /**
  * Lower level utilities for creating WebGL shape geometries.
  * These are not intended for general consumption.
- * @namespace
- */
+ * @namespace 
+  */
 export namespace GLDraw {
+
     // Rotation matrix around z and x axis -
     // according to y basis vector
     // TODO: Try to optimize this (square roots?)
@@ -42,7 +44,9 @@ export namespace GLDraw {
         if (dxy < 0.0001) {
             sinA = 0;
             cosA = 1;
-        } else {
+        }
+
+        else {
             sinA = -dx / dxy;
             cosA = dy / dxy;
         }
@@ -57,7 +61,9 @@ export namespace GLDraw {
         if (dyz < 0.0001) {
             sinB = 0;
             cosB = 1;
-        } else {
+        }
+
+        else {
             sinB = dz / dyz;
             cosB = dy / dyz;
         }
@@ -74,10 +80,13 @@ export namespace GLDraw {
         rot[8] = cosB;
 
         return rot;
-    }
+
+    };
+
 
     // memoize capped cylinder for given radius cylVertexCache
     class CylVertexCache {
+
         // memoize both rounded and flat caps (hemisphere and circle)
         cache: any = {};
         // memoize basis vectors
@@ -89,7 +98,7 @@ export namespace GLDraw {
             let N = Math.pow(2, subdivisions); // eg. 2**4 = 16 subintervals in total
             let i = 2; // start with 2 subdivisions already done
             let M = Math.pow(2, i); // 4
-            let spacing = N / M; // 16/4 = 4; if there were 5 subdivs, then 32/4 = 8.
+            let spacing = N / M;  // 16/4 = 4; if there were 5 subdivs, then 32/4 = 8.
             let j: number;
 
             nvecs[0] = new Vector3(-1, 0, 0);
@@ -102,20 +111,14 @@ export namespace GLDraw {
                 // their spacing is N/M, eg. N=16, M=4, N/M=4; M=8, N/M=2.
                 // they start off at half this spacing
                 // and are equal to the average of the two vectors on either side
-                M = Math.pow(2, i - 1);
+                M = Math.pow(2, (i - 1));
                 spacing = N / M;
-                for (j = 0; j < M - 1; j++) {
-                    nvecs[spacing / 2 + j * spacing] = nvecs[j * spacing]
-                        .clone()
-                        .add(nvecs[(j + 1) * spacing])
-                        .normalize();
+                for (j = 0; j < (M - 1); j++) {
+                    nvecs[spacing / 2 + j * spacing] = nvecs[j * spacing].clone().add(nvecs[(j + 1) * spacing]).normalize();
                 }
                 // treat the last one specially so it wraps around to zero
                 j = M - 1;
-                nvecs[spacing / 2 + j * spacing] = nvecs[j * spacing]
-                    .clone()
-                    .add(nvecs[0])
-                    .normalize();
+                nvecs[spacing / 2 + j * spacing] = nvecs[j * spacing].clone().add(nvecs[0]).normalize();
             }
             this.basisVectorsCache[subdivisions] = nvecs;
             return nvecs;
@@ -177,22 +180,22 @@ export namespace GLDraw {
             var thetaStart = 0;
             var thetaLength = Math.PI;
 
-            var x: number, y: number;
-            var polar = false,
-                equator = false;
+            var x: number, y:number;
+            var polar = false, equator = false;
 
             for (y = 0; y <= heightSegments; y++) {
-                polar = y === 0 || y === heightSegments ? true : false;
-                equator = y === heightSegments / 2 ? true : false;
 
-                var verticesRow = [],
-                    toRow = [];
+                polar = (y === 0 || y === heightSegments) ? true : false;
+                equator = (y === heightSegments / 2) ? true : false;
+
+                var verticesRow = [], toRow = [];
 
                 for (x = 0; x <= widthSegments; x++) {
+
                     // Two vertices rows for equator pointing to previously
                     // constructed cyl points
                     if (equator) {
-                        var xi = x < widthSegments ? 2 * x : 0;
+                        var xi = (x < widthSegments) ? 2 * x : 0;
                         toRow.push(xi + 1);
                         verticesRow.push(xi);
 
@@ -205,35 +208,33 @@ export namespace GLDraw {
                     // Only push first polar point
 
                     if (!polar || x === 0) {
+
                         if (x < widthSegments) {
                             var vertex = new Vector3();
-                            vertex.x =
-                                -radius *
+                            vertex.x = -radius *
                                 Math.cos(phiStart + u * phiLength) *
                                 Math.sin(thetaStart + v * thetaLength);
-                            if (cap == 1) vertex.y = 0;
+                            if (cap == 1)
+                                vertex.y = 0;
                             else
-                                vertex.y =
-                                    radius *
-                                    Math.cos(thetaStart + v * thetaLength);
+                                vertex.y = radius * Math.cos(thetaStart + v * thetaLength);
 
-                            vertex.z =
-                                radius *
+                            vertex.z = radius *
                                 Math.sin(phiStart + u * phiLength) *
                                 Math.sin(thetaStart + v * thetaLength);
 
-                            if (Math.abs(vertex.x) < 1e-5) vertex.x = 0;
-                            if (Math.abs(vertex.y) < 1e-5) vertex.y = 0;
-                            if (Math.abs(vertex.z) < 1e-5) vertex.z = 0;
+                            if (Math.abs(vertex.x) < 1e-5)
+                                vertex.x = 0;
+                            if (Math.abs(vertex.y) < 1e-5)
+                                vertex.y = 0;
+                            if (Math.abs(vertex.z) < 1e-5)
+                                vertex.z = 0;
 
                             if (cap == CAP.FLAT) {
-                                n = new Vector3(
-                                    0,
-                                    Math.cos(thetaStart + v * thetaLength),
-                                    0
-                                );
+                                n = new Vector3(0, Math.cos(thetaStart + v * thetaLength), 0);
                                 n.normalize();
-                            } else {
+                            }
+                            else {
                                 n = new Vector3(vertex.x, vertex.y, vertex.z);
                                 n.normalize();
                             }
@@ -248,16 +249,21 @@ export namespace GLDraw {
                         else {
                             verticesRow.push(nvecs.length - widthSegments);
                         }
+
                     }
 
                     // x > 0; index to already added point
-                    else if (polar) verticesRow.push(nvecs.length - 1);
+                    else if (polar)
+                        verticesRow.push(nvecs.length - 1);
+
                 }
 
                 // extra equator row
-                if (equator) verticesRows.push(toRow);
+                if (equator)
+                    verticesRows.push(toRow);
 
                 verticesRows.push(verticesRow);
+
             }
 
             var obj = {
@@ -265,20 +271,21 @@ export namespace GLDraw {
                 normals: norms,
                 verticesRows: verticesRows,
                 w: widthSegments,
-                h: heightSegments,
+                h: heightSegments
             };
 
             if (!(radius in this.cache)) this.cache[radius] = {};
             this.cache[radius][cacheKey] = obj;
             return obj;
+
         }
-    }
+    };
 
     var cylVertexCache = new CylVertexCache();
 
-    /**
-     * Create a cylinder
-     * @memberof GLDraw
+    /** 
+     * Create a cylinder 
+     * @memberof GLDraw 
      * @param {Geometry}
      *            geo
      * @param {Point}
@@ -292,7 +299,7 @@ export namespace GLDraw {
      * @param {CAP} fromCap - 0 for none, 1 for flat, 2 for round
      * @param {CAP} toCap = 0 for none, 1 for flat, 2 for round
      * @param {Object} [cylinderOptions] - Cylinder quality options
-     *
+     *            
      * */
     export function drawCylinder(
         geo: Geometry,
@@ -306,12 +313,12 @@ export namespace GLDraw {
     ) {
         if (!from || !to) return;
 
-        let getcap = function (c: CAP | string): CAP {
-            if (typeof c === "string") {
+        let getcap = function(c: CAP|string): CAP {
+            if(typeof c === "string") {
                 let s = <string>c;
-                if (s.toLowerCase() == "flat") {
+                if(s.toLowerCase() == 'flat') {
                     return CAP.FLAT;
-                } else if (s.toLowerCase() == "round") {
+                } else if(s.toLowerCase() == 'round') {
                     return CAP.ROUND;
                 } else {
                     return CAP.NONE;
@@ -319,15 +326,15 @@ export namespace GLDraw {
             } else {
                 return <CAP>c;
             }
-        };
+        }
         fromCap = getcap(fromCap);
         toCap = getcap(toCap);
-
+        
         // vertices
         var drawcaps = toCap || fromCap;
         color = color || ({ r: 0, g: 0, b: 0 } as Color);
 
-        var e = getRotationMatrix(to.x - from.x, to.y - from.y, to.z - from.z);
+        var e = getRotationMatrix(to.x-from.x, to.y-from.y, to.z-from.z);
         // get orthonormal vectors from cache
         // TODO: Will have to orient with model view matrix according to direction
         var vobj = cylVertexCache.getVerticesForRadius(
@@ -338,19 +345,15 @@ export namespace GLDraw {
         );
         // w (n) corresponds to the number of orthonormal vectors for cylinder
         // (default 16)
-        var n = vobj.w,
-            h = vobj.h;
+        var n = vobj.w, h = vobj.h;
 
         // get orthonormal vector
-        var n_verts = drawcaps ? h * n + 2 : 2 * n;
+        var n_verts = (drawcaps) ? h * n + 2 : 2 * n;
 
         var geoGroup = geo.updateGeoGroup(n_verts);
 
-        var vertices = vobj.vertices,
-            normals = vobj.normals,
-            verticesRows = vobj.verticesRows;
-        var toRow = verticesRows[h / 2],
-            fromRow = verticesRows[h / 2 + 1];
+        var vertices = vobj.vertices, normals = vobj.normals, verticesRows = vobj.verticesRows;
+        var toRow = verticesRows[h / 2], fromRow = verticesRows[h / 2 + 1];
 
         var start = geoGroup.vertices;
         var offset, faceoffset;
@@ -362,16 +365,11 @@ export namespace GLDraw {
         var faceArray = geoGroup.faceArray;
         // add vertices, opposing vertices paired together
         for (i = 0; i < n; ++i) {
+
             var vi = 2 * i;
 
-            x =
-                e[0] * vertices[vi].x +
-                e[3] * vertices[vi].y +
-                e[6] * vertices[vi].z;
-            y =
-                e[1] * vertices[vi].x +
-                e[4] * vertices[vi].y +
-                e[7] * vertices[vi].z;
+            x = e[0] * vertices[vi].x + e[3] * vertices[vi].y + e[6] * vertices[vi].z;
+            y = e[1] * vertices[vi].x + e[4] * vertices[vi].y + e[7] * vertices[vi].z;
             z = e[5] * vertices[vi].y + e[8] * vertices[vi].z;
 
             // var xn = x/radius, yn = y/radius, zn = z/radius;
@@ -415,49 +413,20 @@ export namespace GLDraw {
             faceArray[faceoffset + 5] = toRow[i + 1] + start;
 
             geoGroup.faceidx += 6;
+
         }
 
         // SPHERE CAPS
         if (drawcaps) {
             // h - sphere rows, verticesRows.length - 2
 
-            var ystart = toCap ? 0 : h / 2;
-            var yend = fromCap ? h + 1 : h / 2 + 1;
-            var v1,
-                v2,
-                v3,
-                v4,
-                x1,
-                x2,
-                x3,
-                x4,
-                y1,
-                y2,
-                y3,
-                y4,
-                z1,
-                z2,
-                z3,
-                z4,
-                nx1,
-                nx2,
-                nx3,
-                nx4,
-                ny1,
-                ny2,
-                ny3,
-                ny4,
-                nz1,
-                nz2,
-                nz3,
-                nz4,
-                v1offset,
-                v2offset,
-                v3offset,
-                v4offset;
+            var ystart = (toCap) ? 0 : h / 2;
+            var yend = (fromCap) ? h + 1 : h / 2 + 1;
+            var v1, v2, v3, v4, x1, x2, x3, x4, y1, y2, y3, y4, z1, z2, z3, z4, nx1, nx2, nx3, nx4, ny1, ny2, ny3, ny4, nz1, nz2, nz3, nz4, v1offset, v2offset, v3offset, v4offset;
 
             for (y = ystart; y < yend; y++) {
-                if (y === h / 2) continue;
+                if (y === h / 2)
+                    continue;
                 // n number of points for each level (verticesRows[i].length -
                 // 1)
                 var cap = y <= h / 2 ? to : from;
@@ -483,6 +452,7 @@ export namespace GLDraw {
                     verticesRows = fromObj.verticesRows;
                 }
                 for (x = 0; x < n; x++) {
+
                     faceoffset = geoGroup.faceidx;
 
                     v1 = verticesRows[y][x + 1];
@@ -495,39 +465,15 @@ export namespace GLDraw {
                     v4offset = (v4 + start) * 3;
 
                     // rotate sphere vectors
-                    x1 =
-                        e[0] * vertices[v1].x +
-                        e[3] * vertices[v1].y +
-                        e[6] * vertices[v1].z;
-                    x2 =
-                        e[0] * vertices[v2].x +
-                        e[3] * vertices[v2].y +
-                        e[6] * vertices[v2].z;
-                    x3 =
-                        e[0] * vertices[v3].x +
-                        e[3] * vertices[v3].y +
-                        e[6] * vertices[v3].z;
-                    x4 =
-                        e[0] * vertices[v4].x +
-                        e[3] * vertices[v4].y +
-                        e[6] * vertices[v4].z;
+                    x1 = e[0] * vertices[v1].x + e[3] * vertices[v1].y + e[6] * vertices[v1].z;
+                    x2 = e[0] * vertices[v2].x + e[3] * vertices[v2].y + e[6] * vertices[v2].z;
+                    x3 = e[0] * vertices[v3].x + e[3] * vertices[v3].y + e[6] * vertices[v3].z;
+                    x4 = e[0] * vertices[v4].x + e[3] * vertices[v4].y + e[6] * vertices[v4].z;
 
-                    y1 =
-                        e[1] * vertices[v1].x +
-                        e[4] * vertices[v1].y +
-                        e[7] * vertices[v1].z;
-                    y2 =
-                        e[1] * vertices[v2].x +
-                        e[4] * vertices[v2].y +
-                        e[7] * vertices[v2].z;
-                    y3 =
-                        e[1] * vertices[v3].x +
-                        e[4] * vertices[v3].y +
-                        e[7] * vertices[v3].z;
-                    y4 =
-                        e[1] * vertices[v4].x +
-                        e[4] * vertices[v4].y +
-                        e[7] * vertices[v4].z;
+                    y1 = e[1] * vertices[v1].x + e[4] * vertices[v1].y + e[7] * vertices[v1].z;
+                    y2 = e[1] * vertices[v2].x + e[4] * vertices[v2].y + e[7] * vertices[v2].z;
+                    y3 = e[1] * vertices[v3].x + e[4] * vertices[v3].y + e[7] * vertices[v3].z;
+                    y4 = e[1] * vertices[v4].x + e[4] * vertices[v4].y + e[7] * vertices[v4].z;
 
                     z1 = e[5] * vertices[v1].y + e[8] * vertices[v1].z;
                     z2 = e[5] * vertices[v2].y + e[8] * vertices[v2].z;
@@ -564,39 +510,15 @@ export namespace GLDraw {
                     colorArray[v3offset + 2] = (color as Color).b;
                     colorArray[v4offset + 2] = (color as Color).b;
 
-                    nx1 =
-                        e[0] * normals[v1].x +
-                        e[3] * normals[v1].y +
-                        e[6] * normals[v1].z;
-                    nx2 =
-                        e[0] * normals[v2].x +
-                        e[3] * normals[v2].y +
-                        e[6] * normals[v2].z;
-                    nx3 =
-                        e[0] * normals[v3].x +
-                        e[3] * normals[v3].y +
-                        e[6] * normals[v3].z;
-                    nx4 =
-                        e[0] * normals[v4].x +
-                        e[3] * normals[v4].y +
-                        e[6] * normals[v4].z;
+                    nx1 = e[0] * normals[v1].x + e[3] * normals[v1].y + e[6] * normals[v1].z;
+                    nx2 = e[0] * normals[v2].x + e[3] * normals[v2].y + e[6] * normals[v2].z;
+                    nx3 = e[0] * normals[v3].x + e[3] * normals[v3].y + e[6] * normals[v3].z;
+                    nx4 = e[0] * normals[v4].x + e[3] * normals[v4].y + e[6] * normals[v4].z;
 
-                    ny1 =
-                        e[1] * normals[v1].x +
-                        e[4] * normals[v1].y +
-                        e[7] * normals[v1].z;
-                    ny2 =
-                        e[1] * normals[v2].x +
-                        e[4] * normals[v2].y +
-                        e[7] * normals[v2].z;
-                    ny3 =
-                        e[1] * normals[v3].x +
-                        e[4] * normals[v3].y +
-                        e[7] * normals[v3].z;
-                    ny4 =
-                        e[1] * normals[v4].x +
-                        e[4] * normals[v4].y +
-                        e[7] * normals[v4].z;
+                    ny1 = e[1] * normals[v1].x + e[4] * normals[v1].y + e[7] * normals[v1].z;
+                    ny2 = e[1] * normals[v2].x + e[4] * normals[v2].y + e[7] * normals[v2].z;
+                    ny3 = e[1] * normals[v3].x + e[4] * normals[v3].y + e[7] * normals[v3].z;
+                    ny4 = e[1] * normals[v4].x + e[4] * normals[v4].y + e[7] * normals[v4].z;
 
                     nz1 = e[5] * normals[v1].y + e[8] * normals[v1].z;
                     nz2 = e[5] * normals[v2].y + e[8] * normals[v2].z;
@@ -605,8 +527,7 @@ export namespace GLDraw {
 
                     // if (Math.abs(vobj.sphereVertices[v1].y) === radius) {
 
-                    if (y === 0) {
-                        //to center circle
+                    if (y === 0) {//to center circle
                         // face = [v1, v3, v4];
                         // norm = [n1, n3, n4];
 
@@ -625,12 +546,12 @@ export namespace GLDraw {
                         faceArray[faceoffset + 2] = v4 + start;
 
                         geoGroup.faceidx += 3;
+
                     }
 
                     // else if (Math.abs(vobj.sphereVertices[v3].y) === radius)
                     // {
-                    else if (y === yend - 1) {
-                        //from end center circle
+                    else if (y === yend - 1) {//from end center circle
                         // face = [v1, v2, v3];
                         // norm = [n1, n2, n3];
 
@@ -649,8 +570,10 @@ export namespace GLDraw {
                         faceArray[faceoffset + 2] = v3 + start;
 
                         geoGroup.faceidx += 3;
-                    } else {
-                        // the rest of the circles
+
+                    }
+
+                    else { // the rest of the circles
                         // face = [v1, v2, v3, v4];
                         // norm = [n1, n2, n3, n4];
 
@@ -684,14 +607,17 @@ export namespace GLDraw {
 
                         geoGroup.faceidx += 6;
                     }
+
                 }
             }
+
         }
 
         geoGroup.vertices += n_verts;
-    }
+    };
 
-    /** Create a cone
+
+    /** Create a cone 
      * @memberof GLDraw
      * @param {Geometry}
      *            geo
@@ -704,20 +630,15 @@ export namespace GLDraw {
      * @param {Color}
      *            color
      *            */
-    export function drawCone(
-        geo: Geometry,
-        from: any,
-        to: any,
-        radius: number,
-        color?: Color
-    ) {
-        if (!from || !to) return;
+    export function drawCone (geo: Geometry, from: any, to: any, radius: number, color?: Color) {
+        if (!from || !to)
+            return;
 
         // TODO: check if from and to do not contain x,y,z and if  so generate a center based on the passed selections
 
         color = color || ({ r: 0, g: 0, b: 0 } as Color);
 
-        let ndir = new Vector3(to.x - from.x, to.y - from.y, to.z - from.z);
+        let ndir = new Vector3(to.x-from.x, to.y-from.y, to.z-from.z);
         var e = getRotationMatrix(ndir.x, ndir.y, ndir.z);
         ndir = ndir.normalize();
 
@@ -786,8 +707,9 @@ export namespace GLDraw {
             colorArray[offset + 2] = color.b;
 
             offset += 3;
+
         }
-        geoGroup.vertices += n + 2;
+        geoGroup.vertices += (n + 2);
         //faces
         faceoffset = geoGroup.faceidx;
         for (i = 0; i < n; i++) {
@@ -805,32 +727,33 @@ export namespace GLDraw {
             faceoffset += 3;
         }
         geoGroup.faceidx += 6 * n;
-    }
+    };
 
     interface MyObject {
         vertices: any[];
         verticesRows: any[][];
         normals: any[];
-    }
+     }
 
     // Sphere component sphereVertexCache
-    class SphereVertexCache {
+    class  SphereVertexCache {
         private cache = new Map<number, Map<number, any>>(); //sphereQuality then radius
         constructor() {}
 
         getVerticesForRadius(radius: number, sphereQuality: any) {
             sphereQuality = sphereQuality || 2;
 
-            if (!this.cache.has(sphereQuality)) {
-                this.cache.set(sphereQuality, new Map<number, any>());
+            if (!this.cache.has(sphereQuality))  {
+                this.cache.set(sphereQuality, new Map<number,any>());
             }
             let radiusCache = this.cache.get(sphereQuality);
-            if (radiusCache.has(radius)) return radiusCache.get(radius);
+            if (radiusCache.has(radius))
+                return radiusCache.get(radius);
 
             var obj: MyObject = {
                 vertices: [],
                 verticesRows: [],
-                normals: [],
+                normals: []
             };
             // scale quality with radius heuristically
             var widthSegments = 16 * sphereQuality;
@@ -849,37 +772,38 @@ export namespace GLDraw {
             var x, y;
 
             for (y = 0; y <= heightSegments; y++) {
+
                 let verticesRow = [];
                 for (x = 0; x <= widthSegments; x++) {
+
                     let u = x / widthSegments;
                     let v = y / heightSegments;
 
-                    let vx =
-                        -radius *
-                        Math.cos(phiStart + u * phiLength) *
+                    let vx = -radius * Math.cos(phiStart + u * phiLength) *
                         Math.sin(thetaStart + v * thetaLength);
                     let vy = radius * Math.cos(thetaStart + v * thetaLength);
-                    let vz =
-                        radius *
-                        Math.sin(phiStart + u * phiLength) *
+                    let vz = radius * Math.sin(phiStart + u * phiLength) *
                         Math.sin(thetaStart + v * thetaLength);
 
                     var n = new Vector3(vx, vy, vz);
                     n.normalize();
 
-                    obj.vertices.push({ x: vx, y: vy, z: vz });
+                    obj.vertices.push({x: vx, y: vy, z: vz});
                     obj.normals.push(n);
 
                     verticesRow.push(obj.vertices.length - 1);
+
                 }
 
                 obj.verticesRows.push(verticesRow);
+
             }
 
             radiusCache.set(radius, obj);
             return obj;
         }
-    }
+
+    };
     var sphereVertexCache = new SphereVertexCache();
 
     /** Create a sphere.
@@ -892,20 +816,12 @@ export namespace GLDraw {
      *            radius
      * @param {Color}
      *            color
-     * @param {number}
+     * @param {number} 
      *            sphereQuality - Quality of sphere (default 2, higher increases number of triangles)
      */
-    export function drawSphere(
-        geo: Geometry,
-        pos: any,
-        radius: number,
-        color: Colored,
-        sphereQuality?: number
-    ) {
-        var vobj = sphereVertexCache.getVerticesForRadius(
-            radius,
-            sphereQuality
-        );
+    export function drawSphere(geo:Geometry, pos: any, radius: number, color: Colored, sphereQuality?: number) {
+
+        var vobj = sphereVertexCache.getVerticesForRadius(radius, sphereQuality);
 
         var vertices = vobj.vertices;
         var normals = vobj.normals;
@@ -923,13 +839,14 @@ export namespace GLDraw {
             let offset = 3 * (start + i);
             let v = vertices[i];
 
-            vertexArray[offset] = v.x + pos.x;
-            vertexArray[offset + 1] = v.y + pos.y;
-            vertexArray[offset + 2] = v.z + pos.z;
+            vertexArray[offset] = (v.x + pos.x);
+            vertexArray[offset + 1] = (v.y + pos.y);
+            vertexArray[offset + 2] = (v.z + pos.z);
 
             colorArray[offset] = (color as Colored).r;
             colorArray[offset + 1] = (color as Colored).g;
             colorArray[offset + 2] = (color as Colored).b;
+
         }
 
         geoGroup.vertices += vertices.length;
@@ -940,17 +857,13 @@ export namespace GLDraw {
         for (let y = 0; y < h; y++) {
             let w = verticesRows[y].length - 1;
             for (let x = 0; x < w; x++) {
-                let faceoffset = geoGroup.faceidx,
-                    lineoffset = geoGroup.lineidx;
 
-                let v1 = verticesRows[y][x + 1] + start,
-                    v1offset = v1 * 3;
-                let v2 = verticesRows[y][x] + start,
-                    v2offset = v2 * 3;
-                let v3 = verticesRows[y + 1][x] + start,
-                    v3offset = v3 * 3;
-                let v4 = verticesRows[y + 1][x + 1] + start,
-                    v4offset = v4 * 3;
+                let faceoffset = geoGroup.faceidx, lineoffset = geoGroup.lineidx;
+
+                let v1 = verticesRows[y][x + 1] + start, v1offset = v1 * 3;
+                let v2 = verticesRows[y][x] + start, v2offset = v2 * 3;
+                let v3 = verticesRows[y + 1][x] + start, v3offset = v3 * 3;
+                let v4 = verticesRows[y + 1][x + 1] + start, v4offset = v4 * 3;
 
                 let n1 = normals[v1 - start];
                 let n2 = normals[v2 - start];
@@ -984,6 +897,7 @@ export namespace GLDraw {
 
                     geoGroup.faceidx += 3;
                     geoGroup.lineidx += 6;
+
                 } else if (Math.abs(vertices[v3 - start].y) === radius) {
                     // face = [v1, v2, v3];
                     // norm = [n1, n2, n3];
@@ -1011,6 +925,7 @@ export namespace GLDraw {
 
                     geoGroup.faceidx += 3;
                     geoGroup.lineidx += 6;
+
                 } else {
                     // face = [v1, v2, v3, v4];
                     // norm = [n1, n2, n3, n4];
@@ -1055,8 +970,12 @@ export namespace GLDraw {
 
                     geoGroup.faceidx += 6;
                     geoGroup.lineidx += 8;
+
                 }
+
             }
         }
-    }
+
+    };
+
 }
