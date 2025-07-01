@@ -116,26 +116,33 @@ export function generateIndexedFaceSetString(
         faces: Array.from(geoGroup.faceArray.slice(0, geoGroup.faceidx)),
     };
 
-    // Step 1: Apply simplification if requested for surfaces
+    // Step 1: Apply orphan vertex removal if requested
+    if (options.removeOrphanVertexes) {
+        processedData = removeOrphanVertices(processedData);
+    }
+
+    // Step 2: Apply simplification if requested for surfaces
     if (geometry.isSurface && options.simplifySurfaces) {
         // Merge vertices with a small tolerance to stitch seams before simplification, ignoring color differences.
-        processedData = mergeVertices(processedData, 0.05, true);
+        processedData = mergeVertices(processedData, 1e-3, true);
         const ratio =
             options.simplifySurfaces === true
                 ? 0.5
                 : parseFloat(options.simplifySurfaces as any);
         if (typeof ratio === "number" && ratio > 0 && ratio < 1) {
             processedData = simplifyMesh(processedData, ratio);
+
+            // There are inevitably small holes at the seams of the surface
+            // chunks. Was not able to resolve this. Let's just merge vertices
+            // again.
+            processedData = mergeVertices(processedData, 1e-3, true);
         }
     } 
 
-    // Step 2: Standard vertex merging (regardless of simplifying)
-    processedData = mergeVertices(processedData, options.mergeVertices);
-
-    // Step 3: Apply orphan vertex removal if requested
-    if (options.removeOrphanVertexes) {
-        processedData = removeOrphanVertices(processedData);
-    }
+    // Step 3: Standard vertex merging (regardless of simplifying)
+    if (options.mergeVertices) {
+        processedData = mergeVertices(processedData, options.mergeVertices);
+    }    
 
     // Step 4: Generate the VRML string from the final processed data
     return _generateFaceSetVRML(processedData, options, indent);

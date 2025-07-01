@@ -47,10 +47,14 @@ export function mergeVertices(
                                 // Check if colors match if they exist
                                 if (!ignoreColors && c) {
                                     const nc = newColorsData[newIndex];
+                                    const avgR = nc.r / nc.count;
+                                    const avgG = nc.g / nc.count;
+                                    const avgB = nc.b / nc.count;
+                           
                                     const colorDistSq =
-                                        (c.r - nc.r) ** 2 +
-                                        (c.g - nc.g) ** 2 +
-                                        (c.b - nc.b) ** 2;
+                                    (c.r - avgR) ** 2 +
+                                    (c.g - avgG) ** 2 +
+                                    (c.b - avgB) ** 2;
                                     if (colorDistSq > 1e-6) continue;
                                 }
                                 oldToNewMap[i] = newIndex;
