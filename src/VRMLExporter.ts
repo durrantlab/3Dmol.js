@@ -159,11 +159,11 @@ export class VRMLExporter {
             output +=
                 materialIndent +
                 "diffuseColor " +
-                material.color.r +
+                this.formatCoord(material.color.r, options.precision) +
                 " " +
-                material.color.g +
+                this.formatCoord(material.color.g, options.precision) +
                 " " +
-                material.color.b +
+                this.formatCoord(material.color.b, options.precision) +
                 "\n";
         }
         if (material.wireframe && geoGroup.colorArray) {
@@ -171,11 +171,11 @@ export class VRMLExporter {
             output +=
                 materialIndent +
                 "emissiveColor " +
-                c[0] +
+                this.formatCoord(c[0], options.precision) +
                 " " +
-                c[1] +
+                this.formatCoord(c[1], options.precision) +
                 " " +
-                c[2] +
+                this.formatCoord(c[2], options.precision) +
                 "\n";
         }
         if (material.transparent) {
@@ -250,10 +250,19 @@ export class VRMLExporter {
             output += geoIndent + " color [\n";
             for (let i = 0; i < geoGroup.vertices; ++i) {
                 const offset = i * 3;
-                const r = geoGroup.colorArray[offset];
-                const g = geoGroup.colorArray[offset + 1];
-                const b = geoGroup.colorArray[offset + 2];
-                output += geoIndent + "  " + r + " " + g + " " + b + ",\n";
+                const r = this.formatCoord(
+                    geoGroup.colorArray[offset],
+                    options.precision
+                   );
+                   const g = this.formatCoord(
+                    geoGroup.colorArray[offset + 1],
+                    options.precision
+                   );
+                   const b = this.formatCoord(
+                    geoGroup.colorArray[offset + 2],
+                    options.precision
+                   );
+                   output += geoIndent + "  " + r + " " + g + " " + b + ",\n";
             }
             output += geoIndent + " ]\n";
             output += geoIndent + "}\n";
@@ -349,12 +358,18 @@ export class VRMLExporter {
                 output +=
                     geoIndent +
                     "  " +
-                    geoGroup.colorArray[offset] +
+                    this.formatCoord(geoGroup.colorArray[offset], options.precision) +
                     " " +
-                    geoGroup.colorArray[offset + 1] +
+                    this.formatCoord(
+                        geoGroup.colorArray[offset + 1],
+                        options.precision
+                       ) +
                     " " +
-                    geoGroup.colorArray[offset + 2] +
-                    ",\n";
+                    this.formatCoord(
+                        geoGroup.colorArray[offset + 2],
+                        options.precision
+                       ) +
+                       ",\n";
             }
             output += geoIndent + " ]\n" + geoIndent + "}\n";
         }
@@ -541,11 +556,17 @@ export class VRMLExporter {
             output += geoIndent + "color Color {\n" + geoIndent + " color [\n";
             for (const c of newColors) {
                 output +=
-                    geoIndent + "  " + c.r + " " + c.g + " " + c.b + ",\n";
+                geoIndent +
+                "  " +
+                this.formatCoord(c.r, options.precision) +
+                " " +
+                this.formatCoord(c.g, options.precision) +
+                " " +
+                this.formatCoord(c.b, options.precision) +
+                ",\n";
             }
             output += geoIndent + " ]\n" + geoIndent + "}\n";
         }
-
         output += geoIndent + "coordIndex [\n";
         for (let i = 0; i < newFaceArray.length; i += 3) {
             output +=
