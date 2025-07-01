@@ -6,7 +6,7 @@ import { Color, ColorConstructorArg } from "../../colors";
 import { Sprite } from 'WebGL/objects';
 import { VRMLExporter } from "../../vrml/VRMLExporter";
 import { VRMLExportOptions } from 'vrml/types';
-
+import { minimizeWhiteSpace } from '../../vrml/optimizers';
 
 export let Object3DIDCount = 0;
 // Object3D base constructor function
@@ -86,11 +86,13 @@ export class Object3D {
     if (topLevel) {
       indent = "";
     }
-
-    const output = exporter.parse(this, options, indent);
-
-    if (topLevel && output.trim().length > 0) {
-      return "#VRML V2.0 utf8\n" + output;
+    let output = exporter.parse(this, options, indent);
+    if (topLevel) {
+      if (output.trim().length === 0) return "";
+      output = "#VRML V2.0 utf8\n" + output;
+      if (options.minimizeWhiteSpace) {
+        output = minimizeWhiteSpace(output);
+      }
     }
     return output;
   }

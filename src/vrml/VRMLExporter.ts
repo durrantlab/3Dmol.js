@@ -10,6 +10,7 @@ import {
 import { VRMLExportOptions } from "./types";
 import { formatCoord } from "./utils";
 import { generateIndexedFaceSetString, generateIndexedLineSetString } from "./generators";
+import { minimizeWhiteSpace } from "./optimizers";
 
 /**
  * A class for exporting a 3Dmol.js scene to VRML format.
@@ -26,6 +27,12 @@ export class VRMLExporter {
         for (const child of scene.children) {
             output += this.parse(child, options, "");
         }
+
+        if (options.minimizeWhiteSpace) {
+            // Remove extra whitespace if requested
+            output = minimizeWhiteSpace(output);
+        }
+
         return output;
     }
 

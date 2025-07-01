@@ -149,3 +149,21 @@ export function removeOrphanVertices(
         faces: finalFaces,
     };
 }
+
+/**
+ * Minimizes whitespace in a VRML string.
+ * This is the core logic for the 'minimizeWhiteSpace' optimization.
+ * It removes unnecessary spaces and leading/trailing whitespace while preserving newlines.
+ * 
+ * @param vrmlTxt - The VRML text to optimize.
+ * @returns The optimized VRML text with minimized whitespace.
+ */
+export function minimizeWhiteSpace(vrmlTxt: string): string {
+    // Remove whitespace at the start of the line, end of the line, after commas, and empty lines
+    return vrmlTxt
+        .replace(/^\s+/gm, "") // Remove leading whitespace on each line
+        .replace(/\s+$/gm, "") // Remove trailing whitespace on each line
+        .replace(/\s*,\s*/g, ",") // Remove spaces around commas
+        .replace(/\n\s*\n/g, "\n") // Remove empty lines
+        .replace(/[ \t]+/g, " "); // Replace multiple spaces/tabs with a single space (but preserve newlines)
+}

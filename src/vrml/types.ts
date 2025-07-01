@@ -18,6 +18,8 @@ export interface VRMLExportOptions {
     cartoonQuality?: number;
     /** If true, remove any vertices not part of a face. */
     removeOrphanVertexes?: boolean;
+    /** If true, removes extra whitespace in the output. */
+    minimizeWhiteSpace?: boolean;
 }
 
 /**
