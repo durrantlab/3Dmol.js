@@ -13,8 +13,9 @@ import { Matrix3, Matrix4, Quaternion, Vector3, XYZ } from "./WebGL/math";
 import { CC, ColorschemeSpec, ColorSpec, elementColors } from "./colors";
 import { AtomSelectionSpec, AtomSpec } from "./specs";
 import { adjustVolumeStyle, extend, getColorFromStyle, getElement, getExtent, getPropertyRange, isEmptyObject, makeFunction, mergeGeos, PausableTimer } from "./utilities";
+import { VRMLExporter } from "./vrml/VRMLExporter";
+import { VRMLExportOptions } from 'vrml/types';
 
-import { VRMLExporter, VRMLExportOptions } from "./VRMLExporter";
 export const CONTEXTS_PER_VIEWPORT = 16;
 
 interface SurfObj {

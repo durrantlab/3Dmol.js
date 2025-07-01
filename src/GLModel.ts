@@ -20,7 +20,8 @@ import { ArrowSpec } from "GLShape";
 import { ParserOptionsSpec } from "./parsers/ParserOptionsSpec";
 import { LabelSpec } from "Label";
 import { assignBonds } from "./parsers/utils/assignBonds";
-import { VRMLExporter, VRMLExportOptions } from "./VRMLExporter";
+import { VRMLExporter } from "./vrml/VRMLExporter";
+import { VRMLExportOptions } from "vrml/types";
 
 /**
  * GLModel represents a group of related atoms

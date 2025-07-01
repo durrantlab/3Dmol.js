@@ -4,7 +4,8 @@ import type { Geometry } from './Geometry';
 import type { Fog } from '../Fog';
 import { Color, ColorConstructorArg } from "../../colors";
 import { Sprite } from 'WebGL/objects';
-import { VRMLExporter, VRMLExportOptions } from "../../VRMLExporter";
+import { VRMLExporter } from "../../vrml/VRMLExporter";
+import { VRMLExportOptions } from 'vrml/types';
 
 
 export let Object3DIDCount = 0;
