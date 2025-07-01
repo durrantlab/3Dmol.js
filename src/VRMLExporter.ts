@@ -22,6 +22,8 @@ export interface VRMLExportOptions {
     cylinderHeightSegments?: number;
     /** Quality of cartoon rendering (default 10). */
     cartoonQuality?: number;
+    /** If true, remove any vertices not part of a face. */
+    removeOrphanVertexes?: boolean;
 }
 
 /**
@@ -253,16 +255,16 @@ export class VRMLExporter {
                 const r = this.formatCoord(
                     geoGroup.colorArray[offset],
                     options.precision
-                   );
-                   const g = this.formatCoord(
+                );
+                const g = this.formatCoord(
                     geoGroup.colorArray[offset + 1],
                     options.precision
-                   );
-                   const b = this.formatCoord(
+                );
+                const b = this.formatCoord(
                     geoGroup.colorArray[offset + 2],
                     options.precision
-                   );
-                   output += geoIndent + "  " + r + " " + g + " " + b + ",\n";
+                );
+                output += geoIndent + "  " + r + " " + g + " " + b + ",\n";
             }
             output += geoIndent + " ]\n";
             output += geoIndent + "}\n";
@@ -303,86 +305,139 @@ export class VRMLExporter {
         options: VRMLExportOptions,
         indent: string
     ): string {
+        let vertices = geoGroup.vertexArray;
+        let normals = geoGroup.normalArray;
+        let colors = geoGroup.colorArray;
+        let faces = geoGroup.faceArray;
+        let numVertices = geoGroup.vertices;
+        let faceidx = geoGroup.faceidx;
+
+        if (options.removeOrphanVertexes && faces && faceidx > 0) {
+            const used = new Uint8Array(numVertices);
+            for (let i = 0; i < faceidx; i++) {
+                used[faces[i]] = 1;
+            }
+
+            const oldToNew = new Int32Array(numVertices);
+            let newNumVertices = 0;
+            for (let i = 0; i < numVertices; i++) {
+                if (used[i]) {
+                    oldToNew[i] = newNumVertices;
+                    newNumVertices++;
+                }
+            }
+
+            if (newNumVertices < numVertices) {
+                const newVertices = new Float32Array(newNumVertices * 3);
+                const newNormals = normals
+                    ? new Float32Array(newNumVertices * 3)
+                    : null;
+                const newColors = colors
+                    ? new Float32Array(newNumVertices * 3)
+                    : null;
+
+                for (let i = 0; i < numVertices; i++) {
+                    if (used[i]) {
+                        const newI = oldToNew[i];
+                        const oldOffset = i * 3;
+                        const newOffset = newI * 3;
+                        newVertices[newOffset] = vertices[oldOffset];
+                        newVertices[newOffset + 1] = vertices[oldOffset + 1];
+                        newVertices[newOffset + 2] = vertices[oldOffset + 2];
+                        if (newNormals && normals) {
+                            newNormals[newOffset] = normals[oldOffset];
+                            newNormals[newOffset + 1] = normals[oldOffset + 1];
+                            newNormals[newOffset + 2] = normals[oldOffset + 2];
+                        }
+                        if (newColors && colors) {
+                            newColors[newOffset] = colors[oldOffset];
+                            newColors[newOffset + 1] = colors[oldOffset + 1];
+                            newColors[newOffset + 2] = colors[oldOffset + 2];
+                        }
+                    }
+                }
+
+                const newFaces = new Uint16Array(faceidx);
+                for (let i = 0; i < faceidx; i++) {
+                    newFaces[i] = oldToNew[faces[i]];
+                }
+
+                vertices = newVertices;
+                normals = newNormals;
+                colors = newColors;
+                faces = newFaces;
+                numVertices = newNumVertices;
+            }
+        }
+
         let output = indent + "geometry IndexedFaceSet {\n";
         const geoIndent = indent + " ";
-
         output += geoIndent + "colorPerVertex TRUE\n";
         output += geoIndent + "normalPerVertex TRUE\n";
         output += geoIndent + "solid FALSE\n";
-
         // Vertices
         output += geoIndent + "coord Coordinate {\n" + geoIndent + " point [\n";
-        for (let i = 0; i < geoGroup.vertices; ++i) {
+        for (let i = 0; i < numVertices; ++i) {
             const offset = i * 3;
-            const x = this.formatCoord(
-                geoGroup.vertexArray?.[offset],
-                options.precision
-            );
+            const x = this.formatCoord(vertices?.[offset], options.precision);
             const y = this.formatCoord(
-                geoGroup.vertexArray?.[offset + 1],
+                vertices?.[offset + 1],
                 options.precision
             );
             const z = this.formatCoord(
-                geoGroup.vertexArray?.[offset + 2],
+                vertices?.[offset + 2],
                 options.precision
             );
             output += geoIndent + "  " + x + " " + y + " " + z + ",\n";
         }
         output += geoIndent + " ]\n" + geoIndent + "}\n";
-
         // Normals
-        output += geoIndent + "normal Normal {\n" + geoIndent + " vector [\n";
-        for (let i = 0; i < geoGroup.vertices; ++i) {
-            const offset = i * 3;
-            const x = this.formatCoord(
-                geoGroup.normalArray?.[offset],
-                options.precision
-            );
-            const y = this.formatCoord(
-                geoGroup.normalArray?.[offset + 1],
-                options.precision
-            );
-            const z = this.formatCoord(
-                geoGroup.normalArray?.[offset + 2],
-                options.precision
-            );
-            output += geoIndent + "  " + x + " " + y + " " + z + ",\n";
+        if (normals) {
+            output +=
+                geoIndent + "normal Normal {\n" + geoIndent + " vector [\n";
+            for (let i = 0; i < numVertices; ++i) {
+                const offset = i * 3;
+                const x = this.formatCoord(normals[offset], options.precision);
+                const y = this.formatCoord(
+                    normals[offset + 1],
+                    options.precision
+                );
+                const z = this.formatCoord(
+                    normals[offset + 2],
+                    options.precision
+                );
+                output += geoIndent + "  " + x + " " + y + " " + z + ",\n";
+            }
+            output += geoIndent + " ]\n" + geoIndent + "}\n";
         }
-        output += geoIndent + " ]\n" + geoIndent + "}\n";
-
         // Colors
-        if (geoGroup.colorArray) {
+        if (colors) {
             output += geoIndent + "color Color {\n" + geoIndent + " color [\n";
-            for (let i = 0; i < geoGroup.vertices; ++i) {
+            for (let i = 0; i < numVertices; ++i) {
                 const offset = i * 3;
                 output +=
                     geoIndent +
                     "  " +
-                    this.formatCoord(geoGroup.colorArray[offset], options.precision) +
+                    this.formatCoord(colors[offset], options.precision) +
                     " " +
-                    this.formatCoord(
-                        geoGroup.colorArray[offset + 1],
-                        options.precision
-                       ) +
+                    this.formatCoord(colors[offset + 1], options.precision) +
                     " " +
-                    this.formatCoord(
-                        geoGroup.colorArray[offset + 2],
-                        options.precision
-                       ) +
-                       ",\n";
+                    this.formatCoord(colors[offset + 2], options.precision) +
+                    ",\n";
             }
             output += geoIndent + " ]\n" + geoIndent + "}\n";
         }
-
         // Faces
-        output += geoIndent + "coordIndex [\n";
-        for (let i = 0; i < geoGroup.faceidx; i += 3) {
-            const x = geoGroup.faceArray?.[i];
-            const y = geoGroup.faceArray?.[i + 1];
-            const z = geoGroup.faceArray?.[i + 2];
-            output += geoIndent + " " + x + ", " + y + ", " + z + ", -1,\n";
+        if (faces) {
+            output += geoIndent + "coordIndex [\n";
+            for (let i = 0; i < faceidx; i += 3) {
+                const x = faces[i];
+                const y = faces[i + 1];
+                const z = faces[i + 2];
+                output += geoIndent + " " + x + ", " + y + ", " + z + ", -1,\n";
+            }
+            output += geoIndent + "]\n";
         }
-        output += geoIndent + "]\n";
         output += indent + "}\n";
         return output;
     }
@@ -394,22 +449,18 @@ export class VRMLExporter {
     ): string {
         const mergeDist = options.mergeVertices as number;
         const mergeDistSq = mergeDist * mergeDist;
-
         const newVertices: { x: number; y: number; z: number }[] = [];
         const newNormals: { x: number; y: number; z: number; count: number }[] =
             [];
         const newColors: { r: number; g: number; b: number }[] = [];
         const oldToNewMap = new Int32Array(geoGroup.vertices).fill(-1);
-
         const grid: { [key: string]: number[] } = {};
         const cellSize = mergeDist;
-
         for (let i = 0; i < geoGroup.vertices; i++) {
             const offset = i * 3;
             const vx = geoGroup.vertexArray[offset];
             const vy = geoGroup.vertexArray[offset + 1];
             const vz = geoGroup.vertexArray[offset + 2];
-
             let r = 0,
                 g = 0,
                 b = 0;
@@ -418,13 +469,10 @@ export class VRMLExporter {
                 g = geoGroup.colorArray[offset + 1];
                 b = geoGroup.colorArray[offset + 2];
             }
-
             const gx = Math.floor(vx / cellSize);
             const gy = Math.floor(vy / cellSize);
             const gz = Math.floor(vz / cellSize);
-
             let found = false;
-
             for (let dx = -1; dx <= 1 && !found; dx++) {
                 for (let dy = -1; dy <= 1 && !found; dy++) {
                     for (let dz = -1; dz <= 1 && !found; dz++) {
@@ -434,19 +482,16 @@ export class VRMLExporter {
                             for (const newIndex of cell) {
                                 const nv = newVertices[newIndex];
                                 const nc = newColors[newIndex];
-
                                 const xdiff = vx - nv.x;
                                 if (Math.abs(xdiff) > mergeDist) continue;
                                 const ydiff = vy - nv.y;
                                 if (Math.abs(ydiff) > mergeDist) continue;
                                 const zdiff = vz - nv.z;
                                 if (Math.abs(zdiff) > mergeDist) continue;
-
                                 const distSq =
                                     xdiff * xdiff +
                                     ydiff * ydiff +
                                     zdiff * zdiff;
-
                                 if (distSq < mergeDistSq) {
                                     if (geoGroup.colorArray) {
                                         const dr = r - nc.r;
@@ -477,7 +522,6 @@ export class VRMLExporter {
                     }
                 }
             }
-
             if (!found) {
                 const newIndex = newVertices.length;
                 oldToNewMap[i] = newIndex;
@@ -493,19 +537,9 @@ export class VRMLExporter {
                 if (geoGroup.colorArray) {
                     newColors.push({ r, g, b });
                 }
-
                 const gridKey = `${gx},${gy},${gz}`;
                 if (!grid[gridKey]) grid[gridKey] = [];
                 grid[gridKey].push(newIndex);
-            }
-        }
-
-        for (const n of newNormals) {
-            const len = Math.sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
-            if (len > 0) {
-                n.x /= len;
-                n.y /= len;
-                n.z /= len;
             }
         }
 
@@ -515,14 +549,81 @@ export class VRMLExporter {
             newFaceArray[i] = oldToNewMap[faceArray[i]];
         }
 
+        let outputVertices: { x: number; y: number; z: number }[] = newVertices;
+        let outputNormals: {
+            x: number;
+            y: number;
+            z: number;
+            count: number;
+        }[] = newNormals;
+        let outputColors: { r: number; g: number; b: number }[] = newColors;
+        let outputFaceArray: Uint16Array = newFaceArray;
+
+        if (options.removeOrphanVertexes) {
+            const used = new Uint8Array(newVertices.length);
+            for (let i = 0; i < newFaceArray.length; i++) {
+                used[newFaceArray[i]] = 1;
+            }
+
+            let newNumVertices = 0;
+            for (let i = 0; i < newVertices.length; i++) {
+                if (used[i]) {
+                    newNumVertices++;
+                }
+            }
+
+            if (newNumVertices < newVertices.length) {
+                const finalVertices: { x: number; y: number; z: number }[] = [];
+                const finalNormals: {
+                    x: number;
+                    y: number;
+                    z: number;
+                    count: number;
+                }[] = [];
+                const finalColors: { r: number; g: number; b: number }[] = [];
+                const newToFinalMap = new Int32Array(newVertices.length);
+                let finalIndex = 0;
+
+                for (let i = 0; i < newVertices.length; i++) {
+                    if (used[i]) {
+                        newToFinalMap[i] = finalIndex;
+                        finalIndex++;
+                        finalVertices.push(newVertices[i]);
+                        if (newNormals.length > 0)
+                            finalNormals.push(newNormals[i]);
+                        if (newColors.length > 0)
+                            finalColors.push(newColors[i]);
+                    }
+                }
+
+                const finalFaceArray = new Uint16Array(newFaceArray.length);
+                for (let i = 0; i < newFaceArray.length; i++) {
+                    finalFaceArray[i] = newToFinalMap[newFaceArray[i]];
+                }
+
+                outputVertices = finalVertices;
+                outputNormals = finalNormals;
+                outputColors = finalColors;
+                outputFaceArray = finalFaceArray;
+            }
+        }
+
+        for (const n of outputNormals) {
+            const len = Math.sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
+            if (len > 0) {
+                n.x /= len;
+                n.y /= len;
+                n.z /= len;
+            }
+        }
+
         let output = indent + "geometry IndexedFaceSet {\n";
         const geoIndent = indent + " ";
         output += geoIndent + "colorPerVertex TRUE\n";
         output += geoIndent + "normalPerVertex TRUE\n";
         output += geoIndent + "solid FALSE\n";
-
         output += geoIndent + "coord Coordinate {\n" + geoIndent + " point [\n";
-        for (const v of newVertices) {
+        for (const v of outputVertices) {
             output +=
                 geoIndent +
                 "  " +
@@ -534,11 +635,10 @@ export class VRMLExporter {
                 ",\n";
         }
         output += geoIndent + " ]\n" + geoIndent + "}\n";
-
-        if (newNormals.length > 0) {
+        if (outputNormals.length > 0) {
             output +=
                 geoIndent + "normal Normal {\n" + geoIndent + " vector [\n";
-            for (const n of newNormals) {
+            for (const n of outputNormals) {
                 output +=
                     geoIndent +
                     "  " +
@@ -551,37 +651,35 @@ export class VRMLExporter {
             }
             output += geoIndent + " ]\n" + geoIndent + "}\n";
         }
-
-        if (newColors.length > 0) {
+        if (outputColors.length > 0) {
             output += geoIndent + "color Color {\n" + geoIndent + " color [\n";
-            for (const c of newColors) {
+            for (const c of outputColors) {
                 output +=
-                geoIndent +
-                "  " +
-                this.formatCoord(c.r, options.precision) +
-                " " +
-                this.formatCoord(c.g, options.precision) +
-                " " +
-                this.formatCoord(c.b, options.precision) +
-                ",\n";
+                    geoIndent +
+                    "  " +
+                    this.formatCoord(c.r, options.precision) +
+                    " " +
+                    this.formatCoord(c.g, options.precision) +
+                    " " +
+                    this.formatCoord(c.b, options.precision) +
+                    ",\n";
             }
             output += geoIndent + " ]\n" + geoIndent + "}\n";
         }
         output += geoIndent + "coordIndex [\n";
-        for (let i = 0; i < newFaceArray.length; i += 3) {
+        for (let i = 0; i < outputFaceArray.length; i += 3) {
             output +=
                 geoIndent +
                 " " +
-                newFaceArray[i] +
+                outputFaceArray[i] +
                 ", " +
-                newFaceArray[i + 1] +
+                outputFaceArray[i + 1] +
                 ", " +
-                newFaceArray[i + 2] +
+                outputFaceArray[i + 2] +
                 ", -1,\n";
         }
         output += geoIndent + "]\n";
         output += indent + "}\n";
-
         return output;
     }
 }
