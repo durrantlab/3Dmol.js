@@ -22,6 +22,8 @@ export interface VRMLExportOptions {
     minimizeWhiteSpace?: boolean;
     /** If set to a number between 0 and 1, reduces the number of polygons in the surfaces to approximately this fraction of the original count. Can also be set to true for a default simplification of 50%. */
     simplifySurfaces?: number | boolean;
+    /** If set to a number, applies Laplacian smoothing to the surface mesh this many times. Can also be set to true for a default of 1 iteration. */
+    smoothSurfaces?: number | boolean;
 }
 
 /**

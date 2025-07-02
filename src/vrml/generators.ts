@@ -2,7 +2,11 @@
 import { Geometry, GeometryGroup, Material } from "../WebGL";
 import { VRMLExportOptions, ProcessedGeometryData } from "./types";
 import { formatCoord } from "./utils";
-import { mergeVertices, removeOrphanVertices } from "./optimizers";
+import {
+    mergeVertices,
+    removeOrphanVertices,
+    laplacianSmooth,
+} from "./optimizers";
 import { simplifyMesh } from "./simplifier";
 
 /**
@@ -131,20 +135,30 @@ export function generateIndexedFaceSetString(
                 : parseFloat(options.simplifySurfaces as any);
         if (typeof ratio === "number" && ratio > 0 && ratio < 1) {
             processedData = simplifyMesh(processedData, ratio);
-
             // There are inevitably small holes at the seams of the surface
             // chunks. Was not able to resolve this. Let's just merge vertices
             // again.
             processedData = mergeVertices(processedData, 1e-3, true);
         }
-    } 
+    }
 
-    // Step 3: Standard vertex merging (regardless of simplifying)
+    // Step 3: Apply smoothing if requested
+    if (options.smoothSurfaces) {
+        const iterations =
+            options.smoothSurfaces === true
+                ? 1
+                : parseInt(options.smoothSurfaces as any);
+        if (iterations > 0) {
+            processedData = laplacianSmooth(processedData, iterations);
+        }
+    }
+
+    // Step 4: Standard vertex merging (regardless of simplifying)
     if (options.mergeVertices) {
         processedData = mergeVertices(processedData, options.mergeVertices);
-    }    
+    }
 
-    // Step 4: Generate the VRML string from the final processed data
+    // Step 5: Generate the VRML string from the final processed data
     return _generateFaceSetVRML(processedData, options, indent);
 }
 
