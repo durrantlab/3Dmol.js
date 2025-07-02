@@ -5,6 +5,7 @@ import { formatCoord } from "./utils";
 import {
     mergeVertices,
     removeOrphanVertices,
+    removeIsolatedVertices,
     laplacianSmooth,
 } from "./optimizers";
 import { simplifyMesh } from "./simplifier";
@@ -81,6 +82,88 @@ export function generateIndexedLineSetString(
 }
 
 /**
+ * Recomputes normals for processed geometry data.
+ * @param {ProcessedGeometryData} data - The geometry data.
+ * @returns {ProcessedGeometryData} The data with recomputed normals.
+ */
+function recomputeNormalsForProcessedData(
+    data: ProcessedGeometryData
+): ProcessedGeometryData {
+    const normals: { x: number; y: number; z: number }[] = data.vertices.map(
+        () => ({ x: 0, y: 0, z: 0 })
+    );
+
+    if (data.faces.length === 0) {
+        return { ...data, normals };
+    }
+
+    // Accumulate face normals
+    for (let i = 0; i < data.faces.length; i += 3) {
+        const i1 = data.faces[i];
+        const i2 = data.faces[i + 1];
+        const i3 = data.faces[i + 2];
+
+        // Skip degenerate faces
+        if (i1 === i2 || i1 === i3 || i2 === i3) continue;
+
+        const v1 = data.vertices[i1];
+        const v2 = data.vertices[i2];
+        const v3 = data.vertices[i3];
+
+        // Calculate face normal using cross product
+        const u = { x: v2.x - v1.x, y: v2.y - v1.y, z: v2.z - v1.z };
+        const v = { x: v3.x - v1.x, y: v3.y - v1.y, z: v3.z - v1.z };
+
+        const normal = {
+            x: u.y * v.z - u.z * v.y,
+            y: u.z * v.x - u.x * v.z,
+            z: u.x * v.y - u.y * v.x,
+        };
+
+        // Check for degenerate triangles
+        const length = Math.sqrt(
+            normal.x * normal.x + normal.y * normal.y + normal.z * normal.z
+        );
+        if (length < 1e-10) continue;
+
+        // Normalize and weight by area
+        normal.x = (normal.x / length) * length;
+        normal.y = (normal.y / length) * length;
+        normal.z = (normal.z / length) * length;
+
+        // Add to vertex normals
+        normals[i1].x += normal.x;
+        normals[i1].y += normal.y;
+        normals[i1].z += normal.z;
+
+        normals[i2].x += normal.x;
+        normals[i2].y += normal.y;
+        normals[i2].z += normal.z;
+
+        normals[i3].x += normal.x;
+        normals[i3].y += normal.y;
+        normals[i3].z += normal.z;
+    }
+
+    // Normalize vertex normals
+    for (const n of normals) {
+        const len = Math.sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
+        if (len > 1e-10) {
+            n.x /= len;
+            n.y /= len;
+            n.z /= len;
+        } else {
+            // Default normal for problematic vertices
+            n.x = 0;
+            n.y = 0;
+            n.z = 1;
+        }
+    }
+
+    return { ...data, normals };
+}
+
+/**
  * Generates an IndexedFaceSet VRML string, applying optimizations as needed.
  */
 export function generateIndexedFaceSetString(
@@ -127,7 +210,7 @@ export function generateIndexedFaceSetString(
 
     // Step 2: Apply simplification if requested for surfaces
     if (geometry.isSurface && options.simplifySurfaces) {
-        // Merge vertices with a small tolerance to stitch seams before simplification, ignoring color differences.
+        // Merge vertices with a small tolerance to stitch seams before simplification
         processedData = mergeVertices(processedData, 1e-3, true);
         const ratio =
             options.simplifySurfaces === true
@@ -135,9 +218,12 @@ export function generateIndexedFaceSetString(
                 : parseFloat(options.simplifySurfaces as any);
         if (typeof ratio === "number" && ratio > 0 && ratio < 1) {
             processedData = simplifyMesh(processedData, ratio);
-            // There are inevitably small holes at the seams of the surface
-            // chunks. Was not able to resolve this. Let's just merge vertices
-            // again.
+            // Remove isolated vertices that may have been created during simplification
+            processedData = removeIsolatedVertices(processedData);
+            // Recompute normals after simplification
+            processedData = recomputeNormalsForProcessedData(processedData);
+
+            // Merge vertices again to clean up seams
             processedData = mergeVertices(processedData, 1e-3, true);
         }
     }
@@ -156,6 +242,8 @@ export function generateIndexedFaceSetString(
     // Step 4: Standard vertex merging (regardless of simplifying)
     if (options.mergeVertices) {
         processedData = mergeVertices(processedData, options.mergeVertices);
+        // Recompute normals after merging
+        processedData = recomputeNormalsForProcessedData(processedData);
     }
 
     // Step 5: Generate the VRML string from the final processed data

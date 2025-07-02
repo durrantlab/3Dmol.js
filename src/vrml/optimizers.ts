@@ -3,6 +3,7 @@ import { Vector3 } from "../WebGL/math";
 import { ProcessedGeometryData } from "./types";
 
 const AVERAGE_COLORS = true; // If false, use the first vertex color instead of averaging
+
 /**
  * Merges vertices that are closer than the specified distance.
  * This is the core logic for the 'mergeVertices' optimization.
@@ -187,6 +188,101 @@ export function removeOrphanVertices(
     };
 }
 
+
+/**
+ * Removes vertices that are only connected to 1 or 2 other vertices.
+ * This helps clean up stray triangles and isolated geometry that can 
+ * result from mesh simplification.
+ *
+ * @param {ProcessedGeometryData} data - The geometry data to clean.
+ * @returns {ProcessedGeometryData} The cleaned geometry data.
+ */
+export function removeIsolatedVertices(
+    data: ProcessedGeometryData
+): ProcessedGeometryData {
+    if (data.faces.length === 0) {
+        return { vertices: [], normals: [], colors: [], faces: [] };
+    }
+
+    // Build adjacency map to count connections for each vertex
+    const adjacency = new Map<number, Set<number>>();
+ 
+    // Initialize adjacency map
+    for (let i = 0; i < data.vertices.length; i++) {
+        adjacency.set(i, new Set<number>());
+    }
+
+    // Populate adjacency map from faces
+    for (let i = 0; i < data.faces.length; i += 3) {
+        const v1 = data.faces[i];
+        const v2 = data.faces[i + 1];
+        const v3 = data.faces[i + 2];
+
+        // Skip degenerate faces
+        if (v1 === v2 || v1 === v3 || v2 === v3) continue;
+
+        adjacency.get(v1)?.add(v2).add(v3);
+        adjacency.get(v2)?.add(v1).add(v3);
+        adjacency.get(v3)?.add(v1).add(v2);
+    }
+
+    // Find vertices with 3 or more connections (well-connected vertices)
+    const validVertices = new Set<number>();
+    for (const [vertexIndex, connections] of adjacency) {
+        if (connections.size >= 3) {
+            validVertices.add(vertexIndex);
+        }
+    }
+
+    // If no vertices need to be removed, return original data
+    if (validVertices.size === data.vertices.length) {
+        return data;
+    }
+
+    // Create mapping from old to new vertex indices
+    const oldToNewMap = new Map<number, number>();
+    const finalVertices: typeof data.vertices = [];
+    const finalNormals: typeof data.normals = [];
+    const finalColors: typeof data.colors = [];
+
+    let newIndex = 0;
+    for (let i = 0; i < data.vertices.length; i++) {
+        if (validVertices.has(i)) {
+            oldToNewMap.set(i, newIndex++);
+            finalVertices.push(data.vertices[i]);
+            if (data.normals.length > i) finalNormals.push(data.normals[i]);
+            if (data.colors.length > i) finalColors.push(data.colors[i]);
+        }
+    }
+
+    // Filter faces to only include those with all valid vertices
+    const finalFaces: number[] = [];
+    for (let i = 0; i < data.faces.length; i += 3) {
+        const v1 = data.faces[i];
+        const v2 = data.faces[i + 1];
+        const v3 = data.faces[i + 2];
+
+        // Only include face if all vertices are valid
+        if (validVertices.has(v1) && validVertices.has(v2) && validVertices.has(v3)) {
+            const newV1 = oldToNewMap.get(v1)!;
+            const newV2 = oldToNewMap.get(v2)!;
+            const newV3 = oldToNewMap.get(v3)!;
+   
+            // Skip degenerate faces after remapping
+            if (newV1 !== newV2 && newV1 !== newV3 && newV2 !== newV3) {
+                finalFaces.push(newV1, newV2, newV3);
+            }
+        }
+    }
+
+    return {
+        vertices: finalVertices,
+        normals: finalNormals,
+        colors: finalColors,
+        faces: finalFaces,
+    };
+}
+
 /**
  * Recomputes normals for a mesh.
  * @param {Array<{x: number, y: number, z: number}>} vertices - The vertices of the mesh.
@@ -203,12 +299,24 @@ function recomputeNormals(
         const i1 = faces[i];
         const i2 = faces[i + 1];
         const i3 = faces[i + 2];
+
+        // Skip degenerate faces
+        if (i1 === i2 || i1 === i3 || i2 === i3) continue;
+
         const v1 = new Vector3(vertices[i1].x, vertices[i1].y, vertices[i1].z);
         const v2 = new Vector3(vertices[i2].x, vertices[i2].y, vertices[i2].z);
         const v3 = new Vector3(vertices[i3].x, vertices[i3].y, vertices[i3].z);
         const cb = new Vector3().subVectors(v3, v2);
         const ab = new Vector3().subVectors(v1, v2);
         const faceNormal = cb.cross(ab);
+  
+        // Check for degenerate triangles (zero area)
+        const faceArea = faceNormal.length();
+        if (faceArea < 1e-10) continue;
+  
+        // Normalize the face normal and weight by area
+        faceNormal.normalize().multiplyScalar(faceArea);
+
         normals[i1].x += faceNormal.x;
         normals[i1].y += faceNormal.y;
         normals[i1].z += faceNormal.z;
@@ -219,12 +327,19 @@ function recomputeNormals(
         normals[i3].y += faceNormal.y;
         normals[i3].z += faceNormal.z;
     }
+
+    // Normalize vertex normals and handle zero-length normals
     for (const n of normals) {
         const len = Math.sqrt(n.x * n.x + n.y * n.y + n.z * n.z);
-        if (len > 0) {
+        if (len > 1e-10) {
             n.x /= len;
             n.y /= len;
             n.z /= len;
+        } else {
+            // Default normal for degenerate cases
+            n.x = 0;
+            n.y = 0;
+            n.z = 1;
         }
     }
     return normals;
@@ -286,6 +401,8 @@ export function laplacianSmooth(
         }
         verts = tps;
     }
+
+    // Always recompute normals after smoothing
     const newNormals = recomputeNormals(verts, faces);
     return {
         vertices: verts,
